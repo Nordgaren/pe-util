@@ -1,4 +1,4 @@
-use crate::util::{case_insensitive_compare_strs_as_bytes,strlen};
+use crate::util::{case_insensitive_compare_strs_as_bytes, strlen};
 use crate::definitions::{
     IMAGE_DATA_DIRECTORY, IMAGE_DOS_HEADER, IMAGE_EXPORT_DIRECTORY,
     IMAGE_FILE_HEADER, IMAGE_IMPORT_DESCRIPTOR, IMAGE_RESOURCE_DIRECTORY_ENTRY,
@@ -24,9 +24,8 @@ mod definitions;
 mod consts;
 mod util;
 
-pub struct PE<'a, T> {
+pub struct PE<T> {
     base_address: usize,
-    dos_header: &'a IMAGE_DOS_HEADER,
     nt_headers: usize,
     image_optional_header: usize,
     is_64bit: bool,
@@ -39,12 +38,13 @@ pub struct Base;
 pub struct NtHeaders;
 
 pub struct ImageOptionalHeader;
+
 pub enum ExportType<'a> {
     Name(&'a str),
-    Ordinal(u16)
+    Ordinal(u16),
 }
 
-impl<'a, T> PE<'a, T> {
+impl<'a, T> PE<T> {
     #[inline(always)]
     pub fn base_address(&self) -> usize {
         self.base_address
@@ -59,7 +59,7 @@ impl<'a, T> PE<'a, T> {
     }
 }
 
-impl<'a> PE<'a, Base> {
+impl<'a> PE<Base> {
     #[inline(always)]
     pub fn from_slice(ptr: &'a [u8]) -> Result<Self, ()> {
         unsafe { Self::from_address(ptr.as_ptr() as usize) }
@@ -91,7 +91,6 @@ impl<'a> PE<'a, Base> {
             let is_64bit = nt_headers.FileHeader.Machine == 0x8664;
             let mut pe = PE {
                 base_address,
-                dos_header,
                 nt_headers: addr_of!(*nt_headers) as usize,
                 image_optional_header: addr_of!(nt_headers.OptionalHeader) as usize,
                 is_64bit,
@@ -112,7 +111,6 @@ impl<'a> PE<'a, Base> {
             let is_64bit = nt_headers.FileHeader.Machine == 0x8664;
             let mut pe = PE {
                 base_address,
-                dos_header,
                 nt_headers: addr_of!(*nt_headers) as usize,
                 image_optional_header: addr_of!(nt_headers.OptionalHeader) as usize,
                 is_64bit,
@@ -161,7 +159,7 @@ impl<'a> PE<'a, Base> {
         if export_data_dir.Size == 0 {
             return self.check_mapped_by_section();
         }
-        let export_table_addr:&IMAGE_EXPORT_DIRECTORY = mem::transmute(self.base_address()
+        let export_table_addr: &IMAGE_EXPORT_DIRECTORY = mem::transmute(self.base_address()
             + self.rva_to_foa(export_data_dir.VirtualAddress)? as usize);
 
         let function_name_table = slice::from_raw_parts(
@@ -197,13 +195,14 @@ impl<'a> PE<'a, Base> {
     }
     #[inline(always)]
     pub fn dos_header(&self) -> &'a IMAGE_DOS_HEADER {
-        self.dos_header
+        unsafe {
+            mem::transmute(self.base_address)
+        }
     }
     #[inline(always)]
-    pub fn nt_headers(&self) -> PE<'a, NtHeaders> {
+    pub fn nt_headers(&self) -> PE<NtHeaders> {
         PE {
             base_address: self.base_address,
-            dos_header: self.dos_header,
             nt_headers: self.nt_headers,
             image_optional_header: self.image_optional_header,
             is_64bit: self.is_64bit,
@@ -262,7 +261,7 @@ impl<'a> PE<'a, Base> {
 
         None
     }
-    pub unsafe fn get_export_rva(&self, export_name: ExportType) -> Option<u32> {
+    pub unsafe fn get_export_rva(&self, export: ExportType) -> Option<u32> {
         let data_dir = self.nt_headers().optional_header().data_directory();
         let export_data_dir = &data_dir[IMAGE_DIRECTORY_ENTRY_EXPORT as usize];
         let mut export_directory_offset = export_data_dir.VirtualAddress;
@@ -282,7 +281,7 @@ impl<'a> PE<'a, Base> {
             export_directory.NumberOfFunctions as usize,
         );
 
-        match export_name {
+        match export {
             Ordinal(ordinal) => {
                 let ordinal = ordinal as u32;
                 let base = export_directory.Base;
@@ -331,9 +330,56 @@ impl<'a> PE<'a, Base> {
                     }
                 }
             }
-
         }
         None
+    }
+    pub unsafe fn get_exports(&self) -> Option<Vec<&'a str>> {
+        let data_dir = self.nt_headers().optional_header().data_directory();
+        let export_data_dir = &data_dir[IMAGE_DIRECTORY_ENTRY_EXPORT as usize];
+        let mut export_directory_offset = export_data_dir.VirtualAddress;
+        if !self.is_mapped() {
+            export_directory_offset = self.rva_to_foa(export_directory_offset)?;
+        }
+
+        let export_directory: &'static IMAGE_EXPORT_DIRECTORY =
+            mem::transmute(self.base_address() + export_directory_offset as usize);
+
+        let mut export_address_table_rva = export_directory.AddressOfFunctions;
+        if !self.is_mapped() {
+            export_address_table_rva = self.rva_to_foa(export_address_table_rva)?;
+        }
+        let export_address_table_array = slice::from_raw_parts(
+            (self.base_address() + export_address_table_rva as usize) as *const u32,
+            export_directory.NumberOfFunctions as usize,
+        );
+
+
+        let mut name_table_offset = export_directory.AddressOfNames;
+        if !self.is_mapped {
+            name_table_offset = self.rva_to_foa(name_table_offset)?;
+        }
+
+        let function_name_table_array = slice::from_raw_parts(
+            (self.base_address() + name_table_offset as usize) as *const u32,
+            export_directory.NumberOfNames as usize,
+        );
+
+        let mut names = vec![];
+        for i in 0..export_directory.NumberOfNames as usize {
+            let mut string_offset = function_name_table_array[i];
+            if !self.is_mapped {
+                string_offset = self.rva_to_foa(string_offset)?;
+            }
+
+            let string_address = self.base_address() + string_offset as usize;
+            let name = slice::from_raw_parts(
+                string_address as *const u8,
+                strlen(string_address as *const u8),
+            );
+            let name = std::str::from_utf8(name).ok()?;
+            names.push(name)
+        }
+        Some(names)
     }
     fn get_function_ordinal(&self, function_name: &[u8]) -> u16 {
         unsafe {
@@ -370,7 +416,8 @@ impl<'a> PE<'a, Base> {
 
         0
     }
-    pub fn get_pe_resource(&self, entry_id:u16, resource_id: u32) -> Option<&'a [u8]> {
+
+    pub fn get_pe_resource(&self, entry_id: u16, resource_id: u32) -> Option<&'a [u8]> {
         let optional_header = self.nt_headers().optional_header().data_directory();
         let resource_data_dir = &optional_header[IMAGE_DIRECTORY_ENTRY_RESOURCE as usize];
 
@@ -399,7 +446,7 @@ impl<'a> PE<'a, Base> {
     }
 }
 
-impl<'a> PE<'a, NtHeaders> {
+impl<'a> PE<NtHeaders> {
     #[inline(always)]
     pub fn address(&self) -> usize {
         self.nt_headers
@@ -421,10 +468,9 @@ impl<'a> PE<'a, NtHeaders> {
         &self.nt_headers32().FileHeader
     }
     #[inline(always)]
-    pub fn optional_header(&self) -> PE<'a, ImageOptionalHeader> {
+    pub fn optional_header(&self) -> PE<ImageOptionalHeader> {
         PE {
             base_address: self.base_address,
-            dos_header: self.dos_header,
             nt_headers: self.nt_headers,
             image_optional_header: self.image_optional_header,
             is_64bit: self.is_64bit,
@@ -442,7 +488,7 @@ impl<'a> PE<'a, NtHeaders> {
     }
 }
 
-impl<'a> PE<'a, ImageOptionalHeader> {
+impl<'a> PE<ImageOptionalHeader> {
     #[inline(always)]
     pub fn address(&self) -> usize {
         self.image_optional_header
@@ -673,6 +719,7 @@ impl<'a> PE<'a, ImageOptionalHeader> {
     }
 }
 
+
 fn get_resource_data_entry<'a>(
     resource_directory_table: &RESOURCE_DIRECTORY_TABLE,
     entry_id: u16,
@@ -704,6 +751,7 @@ fn get_resource_data_entry<'a>(
         Some(mem::transmute(resource_directory_table_addr + offset as usize))
     }
 }
+
 unsafe fn get_entry_offset_by_id(
     resource_directory_table: &RESOURCE_DIRECTORY_TABLE,
     entry_id: u32,
@@ -726,6 +774,7 @@ unsafe fn get_entry_offset_by_id(
 
     None
 }
+
 unsafe fn get_entry_offset_by_name(
     resource_directory_table: &RESOURCE_DIRECTORY_TABLE,
     name: &[u8],
