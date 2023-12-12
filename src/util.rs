@@ -1,4 +1,3 @@
-use std::ops::Add;
 use crate::consts::MAX_PATH;
 
 const CASE_BIT: u8 = 0x20;

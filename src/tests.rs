@@ -1,11 +1,11 @@
 #![cfg(test)]
 
 extern crate alloc;
+
 use crate::definitions::{GRPICONDIR, GRPICONDIRENTRY};
 use crate::ExportType::*;
 use crate::PE;
 use std::fs;
-use std::mem::size_of;
 use util::get_system_dir;
 
 #[link(name = "kernel32", kind = "raw-dylib")]
@@ -25,28 +25,26 @@ fn pe_from_memory_address() {
         assert_eq!(pe.nt_headers().file_header().Machine, 0x014C);
     }
 }
+
 #[test]
 fn pe_from_file_32() {
-    unsafe {
-        let path = get_system_dir().expect("Could not get system directory");
-        let path = path.as_str();
-        let file = fs::read(format!("{path}\\..\\SysWOW64\\notepad.exe")).unwrap();
-        let pe = PE::from_slice(file.as_slice()).unwrap();
-        assert_eq!(pe.nt_headers().file_header().Machine, 0x014C)
-    }
+    let path = get_system_dir().expect("Could not get system directory");
+    let path = path.as_str();
+    let file = fs::read(format!("{path}\\..\\SysWOW64\\notepad.exe")).unwrap();
+    let pe = PE::from_slice(file.as_slice()).unwrap();
+    assert_eq!(pe.nt_headers().file_header().Machine, 0x014C)
 }
+
 #[test]
 fn pe_from_file_64() {
-    unsafe {
-        let path = get_system_dir().expect("Could not get system directory");
-        let path = path.as_str();
-        #[cfg(any(target_arch = "x86_64"))]
-        let file = fs::read(format!("{path}\\notepad.exe")).unwrap();
-        #[cfg(any(target_arch = "x86"))]
-        let file = fs::read(format!("{path}\\..\\Sysnative\\notepad.exe").as_bytes()).unwrap();
-        let pe = PE::from_slice(file.as_slice()).unwrap();
-        assert_eq!(pe.nt_headers().file_header().Machine, 0x8664)
-    }
+    let path = get_system_dir().expect("Could not get system directory");
+    let path = path.as_str();
+    #[cfg(any(target_arch = "x86_64"))]
+    let file = fs::read(format!("{path}\\notepad.exe")).unwrap();
+    #[cfg(any(target_arch = "x86"))]
+    let file = fs::read(format!("{path}\\..\\Sysnative\\notepad.exe").as_bytes()).unwrap();
+    let pe = PE::from_slice(file.as_slice()).unwrap();
+    assert_eq!(pe.nt_headers().file_header().Machine, 0x8664)
 }
 
 #[test]
@@ -76,10 +74,7 @@ fn get_rva() {
             .get_export_rva(Name("LoadLibraryA"))
             .unwrap();
 
-        let load_library_a_address = GetProcAddress(
-            kernel_32_addr,
-            "LoadLibraryA\0".as_ptr(),
-        );
+        let load_library_a_address = GetProcAddress(kernel_32_addr, "LoadLibraryA\0".as_ptr());
         assert_eq!(
             load_library_a_address_offset as usize,
             load_library_a_address - kernel_32_addr
@@ -113,7 +108,8 @@ fn unmapped_pe_resource() {
         let group_header = group_resource.as_ptr() as *const GRPICONDIR;
         let count = (*group_header).idCount as usize;
         let resources_ptr = &(*group_header).iconDirEntry;
-        let icon_dir_entries = std::slice::from_raw_parts(resources_ptr as *const GRPICONDIRENTRY, count);
+        let icon_dir_entries =
+            std::slice::from_raw_parts(resources_ptr as *const GRPICONDIRENTRY, count);
         let mut icon_id = u32::MAX;
         for entry in icon_dir_entries {
             if entry.bWidth == 0 && entry.bHeight == 0 {
@@ -138,13 +134,9 @@ fn get_rva_by_ordinal_on_disk() {
 
         let ordinal = pe.get_function_ordinal("LoadLibraryA".as_bytes());
 
-        let path = get_system_dir().expect("UTF8 Error");
         let load_library_a_address_ordinal_offset = pe.get_export_rva(Ordinal(ordinal)).unwrap();
 
-        let load_library_a_address = GetProcAddress(
-            kernel_32_addr,
-            ordinal as *const u8,
-        );
+        let load_library_a_address = GetProcAddress(kernel_32_addr, ordinal as *const u8);
 
         assert_eq!(
             load_library_a_address_ordinal_offset as usize,
@@ -165,8 +157,7 @@ fn get_rva_on_disk() {
             .unwrap();
 
         let kernel_32_addr = GetModuleHandleA("kernel32.dll\0".as_ptr());
-        let load_library_a_address =
-            GetProcAddress(kernel_32_addr, "LoadLibraryA\0".as_ptr());
+        let load_library_a_address = GetProcAddress(kernel_32_addr, "LoadLibraryA\0".as_ptr());
 
         assert_eq!(
             load_library_a_address_offset as usize,
@@ -174,14 +165,14 @@ fn get_rva_on_disk() {
         );
     }
 }
+
 #[test]
 fn get_exports() {
     unsafe {
         let path = get_system_dir().expect("UTF8 error on get_system_dir");
         let path = path.as_str();
         let kernel32_file = fs::read(format!("{path}/kernel32.dll")).unwrap();
-        let kernel32_dll = PE::from_slice(kernel32_file.as_slice())
-            .unwrap();
+        let kernel32_dll = PE::from_slice(kernel32_file.as_slice()).unwrap();
 
         let exports = kernel32_dll.get_exports().expect("Could not get exports");
         println!("{:?}", exports);
@@ -215,11 +206,11 @@ fn get_exports() {
 
 mod util {
     use std::string::FromUtf8Error;
+
     #[link(name = "kernel32", kind = "raw-dylib")]
     extern "system" {
         fn GetSystemDirectoryA(buffer: *mut u8, buffer_len: u32) -> u32;
     }
-
 
     pub fn get_system_dir() -> Result<String, FromUtf8Error> {
         unsafe {

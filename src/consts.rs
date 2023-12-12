@@ -1,3 +1,4 @@
+#![allow(unused)]
 pub const IMAGE_DOS_SIGNATURE: u16 = 0x5A4D;
 pub const IMAGE_NT_SIGNATURE: u32 = 0x4550;
 
