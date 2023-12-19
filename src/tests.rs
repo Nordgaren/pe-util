@@ -6,7 +6,9 @@ use crate::definitions::{GRPICONDIR, GRPICONDIRENTRY};
 use crate::ExportType::*;
 use crate::PE;
 use std::fs;
+use std::mem::size_of;
 use util::get_system_dir;
+use crate::consts::{IMAGE_FILE_MACHINE_AMD64, IMAGE_FILE_MACHINE_FLAG, IMAGE_FILE_MACHINE_I386};
 
 #[link(name = "kernel32", kind = "raw-dylib")]
 extern "system" {
@@ -19,22 +21,17 @@ fn pe_from_memory_address() {
     unsafe {
         let addr = GetModuleHandleA(std::ptr::null());
         let pe = PE::from_address(addr).unwrap();
-        #[cfg(any(target_arch = "x86_64"))]
-        assert_eq!(pe.nt_headers().file_header().Machine, 0x8664);
-        #[cfg(any(target_arch = "x86"))]
-        assert_eq!(pe.nt_headers().file_header().Machine, 0x014C);
+        assert_eq!(pe.nt_headers().file_header().Machine, IMAGE_FILE_MACHINE_FLAG);
     }
 }
-
 #[test]
 fn pe_from_file_32() {
     let path = get_system_dir().expect("Could not get system directory");
     let path = path.as_str();
     let file = fs::read(format!("{path}\\..\\SysWOW64\\notepad.exe")).unwrap();
     let pe = PE::from_slice(file.as_slice()).unwrap();
-    assert_eq!(pe.nt_headers().file_header().Machine, 0x014C)
+    assert_eq!(pe.nt_headers().file_header().Machine, IMAGE_FILE_MACHINE_I386)
 }
-
 #[test]
 fn pe_from_file_64() {
     let path = get_system_dir().expect("Could not get system directory");
@@ -44,9 +41,8 @@ fn pe_from_file_64() {
     #[cfg(any(target_arch = "x86"))]
     let file = fs::read(format!("{path}\\..\\Sysnative\\notepad.exe").as_bytes()).unwrap();
     let pe = PE::from_slice(file.as_slice()).unwrap();
-    assert_eq!(pe.nt_headers().file_header().Machine, 0x8664)
+    assert_eq!(pe.nt_headers().file_header().Machine, IMAGE_FILE_MACHINE_AMD64)
 }
-
 #[test]
 fn get_rva_by_ordinal() {
     unsafe {
@@ -64,7 +60,6 @@ fn get_rva_by_ordinal() {
         );
     }
 }
-
 #[test]
 fn get_rva() {
     unsafe {
@@ -81,7 +76,6 @@ fn get_rva() {
         );
     }
 }
-
 #[test]
 fn rva_to_foa() {
     unsafe {
@@ -95,7 +89,6 @@ fn rva_to_foa() {
         assert_ne!(rva, 0);
     }
 }
-
 #[test]
 fn unmapped_pe_resource() {
     unsafe {
@@ -125,7 +118,6 @@ fn unmapped_pe_resource() {
         assert_eq!(png[..8], [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
     }
 }
-
 #[test]
 fn get_rva_by_ordinal_on_disk() {
     unsafe {
@@ -144,7 +136,6 @@ fn get_rva_by_ordinal_on_disk() {
         );
     }
 }
-
 #[test]
 fn get_rva_on_disk() {
     unsafe {
@@ -165,7 +156,6 @@ fn get_rva_on_disk() {
         );
     }
 }
-
 #[test]
 fn get_exports() {
     unsafe {

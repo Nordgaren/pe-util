@@ -36,6 +36,12 @@ pub const IMAGE_REL_BASED_MACHINE_SPECIFIC_9: u16 = 9;
 pub const IMAGE_REL_BASED_DIR64: u16 = 10;
 
 pub const MAX_SECTION_HEADER_LEN: u32 = 16;
+pub const IMAGE_FILE_MACHINE_I386: u16 = 0x14C;
+pub const IMAGE_FILE_MACHINE_AMD64: u16 = 0x8664;
+#[cfg(all(target_pointer_width = "64"))]
+pub const IMAGE_FILE_MACHINE_FLAG: u16 = IMAGE_FILE_MACHINE_AMD64;
+#[cfg(all(target_pointer_width = "32"))]
+pub const IMAGE_FILE_MACHINE_FLAG: u16 = IMAGE_FILE_MACHINE_I386;
 
 #[cfg(all(target_pointer_width = "64"))]
 pub const IMAGE_ORDINAL_FLAG: usize = 0x8000000000000000;

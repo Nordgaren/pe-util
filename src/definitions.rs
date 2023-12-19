@@ -1,6 +1,7 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(unused)]
+
 use crate::consts::IMAGE_NUMBEROF_DIRECTORY_ENTRIES;
 #[repr(C, packed(2))]
 pub struct IMAGE_DOS_HEADER {
