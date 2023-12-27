@@ -402,7 +402,7 @@ impl<'a> PE<Base> {
         0
     }
 
-    pub fn get_pe_resource(&self, entry_id: u16, resource_id: u32) -> Option<&'a [u8]> {
+    pub fn get_pe_resource(&self, category_id: u32, resource_id: u32) -> Option<&'a [u8]> {
         let optional_header = self.nt_headers().optional_header().data_directory();
         let resource_data_dir = &optional_header[IMAGE_DIRECTORY_ENTRY_RESOURCE as usize];
 
@@ -415,7 +415,7 @@ impl<'a> PE<Base> {
                 mem::transmute(self.base_address + resource_directory_table_offset as usize);
 
             let resource_data_entry =
-                get_resource_data_entry(resource_directory_table, entry_id, resource_id)?;
+                get_resource_data_entry(resource_directory_table, category_id, resource_id)?;
 
             let mut data_offset = resource_data_entry.DataRVA;
             if !self.is_mapped {
@@ -706,14 +706,14 @@ impl<'a> PE<ImageOptionalHeader> {
 
 fn get_resource_data_entry<'a>(
     resource_directory_table: &RESOURCE_DIRECTORY_TABLE,
-    entry_id: u16,
+    category_id: u32,
     resource_id: u32,
 ) -> Option<&'a RESOURCE_DATA_ENTRY> {
     unsafe {
         let resource_directory_table_addr = addr_of!(*resource_directory_table) as usize;
 
         //level 1: Resource type directory
-        let mut offset = get_entry_offset_by_id(resource_directory_table, entry_id as u32)?;
+        let mut offset = get_entry_offset_by_id(resource_directory_table, category_id)?;
         offset &= 0x7FFFFFFF;
 
         //level 2: Resource Name/ID subdirectory
@@ -740,7 +740,7 @@ fn get_resource_data_entry<'a>(
 
 unsafe fn get_entry_offset_by_id(
     resource_directory_table: &RESOURCE_DIRECTORY_TABLE,
-    entry_id: u32,
+    category_id: u32,
 ) -> Option<u32> {
     // We have to skip the Name entries, here, to iterate over the entires by Id.
     let resource_entries_address = addr_of!(*resource_directory_table) as usize
@@ -753,7 +753,7 @@ unsafe fn get_entry_offset_by_id(
     );
 
     for resource_directory_entry in resource_directory_entries {
-        if resource_directory_entry.Id == entry_id {
+        if resource_directory_entry.Id == category_id {
             return Some(resource_directory_entry.OffsetToData);
         }
     }
