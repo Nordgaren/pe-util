@@ -121,6 +121,8 @@ impl<'a> PE<Base> {
             pe
         }
     }
+    // Check as if the file is an image on disk. We should be able to read the entire import table (or export table, if the import table is empty),
+    // as ascii strings, if it's a file on disk.
     fn check_mapped(&self) -> Option<bool> {
         unsafe {
             let data_dir = self.nt_headers().optional_header().data_directory();
@@ -135,6 +137,7 @@ impl<'a> PE<Base> {
 
             let import_descriptor_table = slice::from_raw_parts(
                 import_table_addr as *const IMAGE_IMPORT_DESCRIPTOR,
+                // The last entry is all 0s to denote the end of the table.
                 length - 1,
             );
 
