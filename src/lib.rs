@@ -64,7 +64,7 @@ impl<'a> PE<Base> {
         unsafe { Self::from_address(ptr.as_ptr() as usize) }
     }
     #[inline(always)]
-    pub fn from_slice_assume_mapped(ptr: &'a [u8]) -> Result<Self, ()> {
+    pub fn from_slice_assume_mapped(ptr: &'a [u8]) -> Self {
         unsafe { Self::from_address_assume_mapped(ptr.as_ptr() as usize) }
     }
     #[inline(always)]
@@ -125,7 +125,7 @@ impl<'a> PE<Base> {
             pe
         }
     }
-    pub unsafe fn from_address_assume_mapped(base_address: usize) -> Result<Self, ()> {
+    pub unsafe fn from_address_assume_mapped(base_address: usize) -> Self {
         unsafe {
             let dos_header: &IMAGE_DOS_HEADER = mem::transmute(base_address);
             let nt_headers: &IMAGE_NT_HEADERS32 =
