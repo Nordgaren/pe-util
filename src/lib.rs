@@ -64,6 +64,10 @@ impl<'a> PE<Base> {
         unsafe { Self::from_address(ptr.as_ptr() as usize) }
     }
     #[inline(always)]
+    pub fn from_slice_assume_mapped(ptr: &'a [u8]) -> Result<Self, ()> {
+        unsafe { Self::from_address_assume_mapped(ptr.as_ptr() as usize) }
+    }
+    #[inline(always)]
     pub fn from_slice_unchecked(ptr: &'a [u8]) -> Self {
         unsafe { Self::from_address_unchecked(ptr.as_ptr() as usize) }
     }
@@ -119,6 +123,31 @@ impl<'a> PE<Base> {
             pe.is_mapped = pe.check_mapped().unwrap_or(true);
 
             pe
+        }
+    }
+    pub unsafe fn from_address_assume_mapped(base_address: usize) -> Result<Self, ()> {
+        unsafe {
+            let dos_header: &IMAGE_DOS_HEADER = mem::transmute(base_address);
+            let nt_headers: &IMAGE_NT_HEADERS32 =
+                mem::transmute(base_address + dos_header.e_lfanew as usize);
+
+            if dos_header.e_magic != IMAGE_DOS_SIGNATURE
+                && nt_headers.Signature != IMAGE_NT_SIGNATURE
+            {
+                return Err(());
+            }
+
+            let is_64bit = nt_headers.FileHeader.Machine == 0x8664;
+            let mut pe = PE {
+                base_address,
+                nt_headers: addr_of!(*nt_headers) as usize,
+                image_optional_header: addr_of!(nt_headers.OptionalHeader) as usize,
+                is_64bit,
+                is_mapped: true,
+                phantom_data: PhantomData,
+            };
+
+            Ok(pe)
         }
     }
     // Check as if the file is an image on disk. We should be able to read the entire import table (or export table, if the import table is empty),
