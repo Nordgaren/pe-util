@@ -256,7 +256,7 @@ impl<'a> PE<Base> {
         }
     }
     #[inline(always)]
-    pub fn section_headers_mut(&self) -> &'a [IMAGE_SECTION_HEADER] {
+    pub fn section_headers_mut(&self) -> &'a mut [IMAGE_SECTION_HEADER] {
         let section_headers_base = self.nt_headers().address() + self.nt_headers().size_of();
         unsafe {
             slice::from_raw_parts_mut(
