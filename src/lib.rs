@@ -141,7 +141,7 @@ impl<'a> PE<Base> {
                 phantom_data: PhantomData,
             };
 
-            Ok(pe)
+            pe
         }
     }
     // Check as if the file is an image on disk. We should be able to read the entire import table (or export table, if the import table is empty),
