@@ -131,12 +131,6 @@ impl<'a> PE<Base> {
             let nt_headers: &IMAGE_NT_HEADERS32 =
                 mem::transmute(base_address + dos_header.e_lfanew as usize);
 
-            if dos_header.e_magic != IMAGE_DOS_SIGNATURE
-                && nt_headers.Signature != IMAGE_NT_SIGNATURE
-            {
-                return Err(());
-            }
-
             let is_64bit = nt_headers.FileHeader.Machine == 0x8664;
             let mut pe = PE {
                 base_address,
