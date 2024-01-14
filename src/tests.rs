@@ -39,7 +39,7 @@ fn pe_from_file_64() {
     #[cfg(any(target_arch = "x86_64"))]
     let file = fs::read(format!("{path}\\notepad.exe")).unwrap();
     #[cfg(any(target_arch = "x86"))]
-    let file = fs::read(format!("{path}\\..\\Sysnative\\notepad.exe").as_bytes()).unwrap();
+    let file = fs::read(format!("{path}\\..\\Sysnative\\notepad.exe")).unwrap();
     let pe = PE::from_slice(file.as_slice()).unwrap();
     assert_eq!(pe.nt_headers().file_header().Machine, IMAGE_FILE_MACHINE_AMD64)
 }
