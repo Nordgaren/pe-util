@@ -393,6 +393,50 @@ impl<'a> PE<Base> {
         }
         Some(names)
     }
+    pub unsafe fn get_export_name(&self, ordinal: u16) -> Option<String> {
+        let data_dir = self.nt_headers().optional_header().data_directory();
+        let export_data_dir = &data_dir[IMAGE_DIRECTORY_ENTRY_EXPORT as usize];
+        let mut export_directory_offset = export_data_dir.VirtualAddress;
+        if !self.is_mapped() {
+            export_directory_offset = self.rva_to_foa(export_directory_offset)?;
+        }
+
+        let export_directory: &'static IMAGE_EXPORT_DIRECTORY =
+            mem::transmute(self.base_address() + export_directory_offset as usize);
+
+        let mut name_table_offset = export_directory.AddressOfNames;
+        if !self.is_mapped {
+            name_table_offset = self.rva_to_foa(name_table_offset)?;
+        }
+
+        let function_name_table_array = slice::from_raw_parts(
+            (self.base_address() + name_table_offset as usize) as *const u32,
+            export_directory.NumberOfNames as usize,
+        );
+
+        for i in 0..export_directory.NumberOfNames as usize {
+            let ordinal = ordinal as u32;
+            let base = export_directory.Base;
+
+            if (ordinal - base) != ordinal {
+                continue
+            }
+
+            let mut string_offset = function_name_table_array[i];
+            if !self.is_mapped {
+                string_offset = self.rva_to_foa(string_offset)?;
+            }
+
+            let string_address = self.base_address() + string_offset as usize;
+            let name = slice::from_raw_parts(
+                string_address as *const u8,
+                strlen(string_address as *const u8),
+            );
+            return String::from_utf8(name.to_vec()).ok();
+        }
+
+        None
+    }
     fn get_function_ordinal(&self, function_name: &[u8]) -> u16 {
         unsafe {
             let base_addr = self.base_address();
