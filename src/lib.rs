@@ -65,8 +65,8 @@ impl<'a> PE<Base> {
         unsafe { Self::from_address(ptr.as_ptr() as usize) }
     }
     #[inline(always)]
-    pub fn from_slice_assume_mapped(ptr: &'a [u8]) -> Self {
-        unsafe { Self::from_address_assume_mapped(ptr.as_ptr() as usize) }
+    pub fn from_slice_assume_mapped(ptr: &'a [u8], is_mapped: bool) -> Self {
+        unsafe { Self::from_address_assume_mapped(ptr.as_ptr() as usize, is_mapped) }
     }
     #[inline(always)]
     pub fn from_slice_unchecked(ptr: &'a [u8]) -> Self {
@@ -126,7 +126,7 @@ impl<'a> PE<Base> {
             pe
         }
     }
-    pub unsafe fn from_address_assume_mapped(base_address: usize) -> Self {
+    pub unsafe fn from_address_assume_mapped(base_address: usize, is_mapped: bool) -> Self {
         unsafe {
             let dos_header: &IMAGE_DOS_HEADER = mem::transmute(base_address);
             let nt_headers: &IMAGE_NT_HEADERS32 =
@@ -138,7 +138,7 @@ impl<'a> PE<Base> {
                 nt_headers: addr_of!(*nt_headers) as usize,
                 image_optional_header: addr_of!(nt_headers.OptionalHeader) as usize,
                 is_64bit,
-                is_mapped: true,
+                is_mapped,
                 phantom_data: PhantomData,
             };
 
