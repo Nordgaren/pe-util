@@ -22,6 +22,7 @@ mod consts;
 mod definitions;
 mod tests;
 mod util;
+mod resource;
 
 pub struct PE<T> {
     base_address: usize,
