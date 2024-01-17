@@ -275,9 +275,13 @@ impl<'a> PE<Base> {
             if (rva >= section_header.VirtualAddress)
                 && (rva <= section_header.VirtualAddress + section_header.SizeOfRawData)
             {
-                return Some(
-                    section_header.PointerToRawData + (rva - section_header.VirtualAddress),
-                );
+                let foa = section_header.PointerToRawData + (rva - section_header.VirtualAddress);
+                let end_of_pe = self.base_address + self.nt_headers().optional_header().size_of_image() as usize;
+                if end_of_pe < self.base_address + foa as usize {
+                    break;
+                }
+
+                return Some(foa);
             }
         }
 
@@ -816,7 +820,7 @@ unsafe fn get_entry_offset_by_id(
     let resource_entries_address = addr_of!(*resource_directory_table) as usize
         + size_of::<RESOURCE_DIRECTORY_TABLE>()
         + (size_of::<IMAGE_RESOURCE_DIRECTORY_ENTRY>()
-            * resource_directory_table.NumberOfNameEntries as usize);
+        * resource_directory_table.NumberOfNameEntries as usize);
     let resource_directory_entries = slice::from_raw_parts(
         resource_entries_address as *const IMAGE_RESOURCE_DIRECTORY_ENTRY,
         resource_directory_table.NumberOfIDEntries as usize,
