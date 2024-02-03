@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"pe_util":[["impl&lt;'a, S&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.74.1/core/panic/unwind_safe/trait.UnwindSafe.html\" title=\"trait core::panic::unwind_safe::UnwindSafe\">UnwindSafe</a> for <a class=\"struct\" href=\"pe_util/struct.PE.html\" title=\"struct pe_util::PE\">PE</a>&lt;'a, S&gt;<span class=\"where fmt-newline\">where\n    S: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.74.1/core/panic/unwind_safe/trait.RefUnwindSafe.html\" title=\"trait core::panic::unwind_safe::RefUnwindSafe\">RefUnwindSafe</a>,</span>",1,["pe_util::PE"]]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

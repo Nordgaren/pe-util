@@ -1,6 +1,7 @@
 # pe-util
-A pointer sized type that allows the user to read a buffer in memory as a Windows PE. Currently only supports 32-bit
-and 64-bit PEs on x86 architectures, but, I plan on supporting more architectures in the future.
+A pointer sized type that allows the user to read a buffer in memory as a Windows PE reguardless of architecture or mapped 
+state. Currently only supports 32-bit and 64-bit PEs on x86 architectures, but, I plan on supporting more architectures 
+in the future.
 
 ## Usage
 Construct the type with a slice, *const u8 or usize with the value of the memory address where the PE file lies in 
