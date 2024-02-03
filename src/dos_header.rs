@@ -44,6 +44,20 @@ impl<'a> PE<'a, DosHeader> {
     pub fn from_slice(slice: &'a [u8]) -> std::io::Result<Self> {
         Self::from_address(slice.as_ptr() as usize)
     }
+    /// Returns a `PE` from a slice that starts with a valid PE file. The returned `PE` shares the
+    /// lifetime of the slice. Does not validate that the slice is a valid PE file.
+    ///
+    /// # Arguments
+    ///
+    /// * `slice`: `&'a [u8]`
+    ///
+    /// returns: `Result<PE<DosHeader>, Error>`
+    /// Safety
+    /// This function does not check EncodedPointer compatability, mapped state, nor that the slice is a valid PE file.
+    #[inline(always)]
+    pub unsafe fn from_slice_unchecked(slice: &'a [u8]) -> Self {
+        Self::from_ptr_unchecked(slice.as_ptr())
+    }
     /// Returns a `PE` from a slice that shares the lifetime of the slice. Assumes the mapped state of
     /// with the passed in `is_mapped` parameter, and does not validate that the slice is a valid
     /// PE file.
