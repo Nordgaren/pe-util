@@ -2,13 +2,16 @@
 
 extern crate alloc;
 
-use crate::definitions::{GRPICONDIR, GRPICONDIRENTRY};
-use crate::ExportType::*;
+use crate::consts::{IMAGE_FILE_MACHINE_AMD64, IMAGE_FILE_MACHINE_FLAG, IMAGE_FILE_MACHINE_I386};
+use crate::resource::icon::{GRPICONDIR, GRPICONDIRENTRY};
 use crate::PE;
 use std::fs;
 use std::mem::size_of;
 use util::get_system_dir;
-use crate::consts::{IMAGE_FILE_MACHINE_AMD64, IMAGE_FILE_MACHINE_FLAG, IMAGE_FILE_MACHINE_I386};
+use crate::dos_header::DosHeader;
+use crate::dos_header::ExportType::*;
+use crate::nt_headers::NtHeaders;
+use crate::optional_header::ImageOptionalHeader;
 
 #[link(name = "kernel32", kind = "raw-dylib")]
 extern "system" {
@@ -21,7 +24,10 @@ fn pe_from_memory_address() {
     unsafe {
         let addr = GetModuleHandleA(std::ptr::null());
         let pe = PE::from_address(addr).unwrap();
-        assert_eq!(pe.nt_headers().file_header().Machine, IMAGE_FILE_MACHINE_FLAG);
+        assert_eq!(
+            pe.nt_headers().file_header().Machine,
+            IMAGE_FILE_MACHINE_FLAG
+        );
     }
 }
 #[test]
@@ -30,7 +36,10 @@ fn pe_from_file_32() {
     let path = path.as_str();
     let file = fs::read(format!("{path}\\..\\SysWOW64\\notepad.exe")).unwrap();
     let pe = PE::from_slice(file.as_slice()).unwrap();
-    assert_eq!(pe.nt_headers().file_header().Machine, IMAGE_FILE_MACHINE_I386)
+    assert_eq!(
+        pe.nt_headers().file_header().Machine,
+        IMAGE_FILE_MACHINE_I386
+    )
 }
 #[test]
 fn pe_from_file_64() {
@@ -41,7 +50,10 @@ fn pe_from_file_64() {
     #[cfg(any(target_arch = "x86"))]
     let file = fs::read(format!("{path}\\..\\Sysnative\\notepad.exe")).unwrap();
     let pe = PE::from_slice(file.as_slice()).unwrap();
-    assert_eq!(pe.nt_headers().file_header().Machine, IMAGE_FILE_MACHINE_AMD64)
+    assert_eq!(
+        pe.nt_headers().file_header().Machine,
+        IMAGE_FILE_MACHINE_AMD64
+    )
 }
 #[test]
 fn get_rva_by_ordinal() {
@@ -100,7 +112,7 @@ fn unmapped_pe_resource() {
             .expect("Could not find RT_GROUP_ICON");
         let group_header = group_resource.as_ptr() as *const GRPICONDIR;
         let count = (*group_header).idCount as usize;
-        let resources_ptr = &(*group_header).iconDirEntry;
+        let resources_ptr = &(*group_header).idEntries;
         let icon_dir_entries =
             std::slice::from_raw_parts(resources_ptr as *const GRPICONDIRENTRY, count);
         let mut icon_id = u32::MAX;
@@ -165,34 +177,55 @@ fn get_exports() {
         let kernel32_dll = PE::from_slice(kernel32_file.as_slice()).unwrap();
 
         let exports = kernel32_dll.get_exports().expect("Could not get exports");
-        println!("{:?}", exports);
+        // println!("{:?}", exports);
 
         assert_ne!(exports.len(), 0)
     }
 }
 
+#[test]
+fn size() {
+    assert_eq!(size_of::<PE<DosHeader>>(), size_of::<usize>());
+    assert_eq!(size_of::<PE<NtHeaders>>(), size_of::<usize>());
+    assert_eq!(size_of::<PE<ImageOptionalHeader>>(), size_of::<usize>());
+}
+
 // This test should not compile.
-//     |
-// 184 |                 pe = PE::from_slice(file.as_slice()).unwrap();
-//     |                                     ^^^^^^^^^^^^^^^ borrowed value does not live long enough
-// 185 |             }
-//     |             - `file` dropped here while still borrowed
-// 186 |             assert_ne!(pe.nt_headers().file_header().Machine, 0x8664)
-//     |                        --------------- borrow later used here
+//       |
+//       |             let file = fs::read(format!("{path}\\notepad.exe")).unwrap();
+//       |                 ---- binding `file` declared here
+//       |             pe = PE::from_slice(file.as_slice()).expect("Could not parse slice as a PE.");
+//       |                                 ^^^^ borrowed value does not live long enough
+//       |         }
+//       |         - `file` dropped here while still borrowed
+//       |         assert_ne!(pe.nt_headers().file_header().Machine, 0x8664)
+//       |                    -- borrow later used here
 // #[test]
-// fn pe_from_file_lifetime_fail() {
+// fn pe_from_file_lifetime_no_compile() {
 //     unsafe {
-//         let mut buffer = [0; MAX_PATH + 1];
-//         GetSystemDirectoryA(buffer.as_mut_ptr(), buffer.len() as u32);
+//         let mut path = get_system_dir().expect("Could not get system dir.");
 //         let pe;
-//         let path = String::from_utf8(buffer[..strlen(buffer.as_ptr())].to_vec()).unwrap();
 //         {
-//             let file = fs::read(format!("{path}\\notepad.exe").as_bytes()).unwrap();
-//             pe = PE::from_slice(file.as_slice()).unwrap();
+//             let file = fs::read(format!("{path}\\notepad.exe")).unwrap();
+//             pe = PE::from_slice(file.as_slice()).expect("Could not parse slice as a PE.");
 //         }
-//         assert_ne!(pe.nt_headers().file_header().Machine, 0x8664)
+//         assert_eq!(pe.nt_headers().file_header().Machine, 0x8664)
 //     }
 // }
+
+#[test]
+// I currently don't know how to associate a lifetime with a usize or a pointer, so `PE::from_address()` and `PE::from_ptr()`
+// will allow the user to create a PE that doesn't have any lifetime issues.
+fn pe_from_address_no_lifetime_issues() {
+    unsafe {
+        let pe;
+        {
+            let file = GetModuleHandleA("Kernel32.dll\0".as_ptr());
+            pe = PE::from_address(file).expect("Could not parse slice as a PE.");
+        }
+        assert_eq!(pe.nt_headers().file_header().Machine, 0x8664)
+    }
+}
 
 mod util {
     use std::string::FromUtf8Error;

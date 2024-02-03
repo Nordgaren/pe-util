@@ -27,8 +27,8 @@ pub fn case_insensitive_compare_strs_as_bytes(
 
     true
 }
+
 // Need internal function for this in unmapped PE state.
-#[no_mangle]
 pub unsafe fn strlen(s: *const u8) -> usize {
     let mut len = 0;
     while *s.add(len) != 0 && len <= MAX_PATH {

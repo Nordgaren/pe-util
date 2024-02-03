@@ -1,1 +1,1 @@
-mod icon;
+pub mod icon;

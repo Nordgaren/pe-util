@@ -4,7 +4,7 @@ use std::ptr::addr_of;
 // I am not sure if I should do this for both structures, or just have to user add the size of `GRPICONDIR`
 // to the pointer to `GRPICONDIR` get the pointer to `GRPICONDIRENTRY`.
 #[derive(Default)]
-#[repr(C,packed(2))]
+#[repr(C, packed(2))]
 pub struct GRPICONDIR {
     pub idReserved: u16,
     pub idType: u16,
