@@ -2,11 +2,12 @@ use std::io::{Error, ErrorKind};
 use std::marker::PhantomData;
 use std::{cmp, mem};
 use std::mem::size_of;
+use std::str::Utf8Error;
 use encoded_pointer::encoded::EncodedPointer;
 use crate::{get_resource_data_entry, PE};
 use crate::consts::{IMAGE_DIRECTORY_ENTRY_EXPORT, IMAGE_DIRECTORY_ENTRY_IMPORT, IMAGE_DIRECTORY_ENTRY_RESOURCE, IMAGE_DOS_SIGNATURE, IMAGE_NT_SIGNATURE, MAX_SECTION_HEADER_LEN};
 use crate::definitions::{IMAGE_DATA_DIRECTORY, IMAGE_DOS_HEADER, IMAGE_EXPORT_DIRECTORY, IMAGE_IMPORT_DESCRIPTOR, IMAGE_NT_HEADERS32, IMAGE_SECTION_HEADER, RESOURCE_DIRECTORY_TABLE};
-use crate::dos_header::ExportType::{Name, Ordinal};
+use crate::dos_header::FunctionId::{Name, Ordinal};
 use crate::nt_headers::NtHeaders;
 use crate::util::{case_insensitive_compare_strs_as_bytes, strlen};
 
@@ -14,8 +15,9 @@ use crate::util::{case_insensitive_compare_strs_as_bytes, strlen};
 /// functionality that shouldn't be shared with the other typestates.
 #[derive(Copy, Clone)]
 pub struct DosHeader;
-
-pub enum ExportType<'a> {
+/// An enum that represents the various types of ways a function can be Imported or Exported in a PE
+/// file.
+pub enum FunctionId<'a> {
     Name(&'a str),
     Ordinal(u16),
 }
@@ -33,10 +35,10 @@ impl<'a> PE<'a, DosHeader> {
     /// returns: `Result<PE<DosHeader>, Error>`
     #[inline(always)]
     pub fn from_slice(slice: &'a [u8]) -> std::io::Result<Self> {
-        unsafe { Self::from_address(slice.as_ptr() as usize) }
+        Self::from_address(slice.as_ptr() as usize)
     }
     /// Returns a `PE` from a slice that shares the lifetime of the slice. Assumes the mapped state of
-    /// with the passed in `is_mapped` parameter, and does not validate that it the slice is a valid
+    /// with the passed in `is_mapped` parameter, and does not validate that the slice is a valid
     /// PE file.
     ///
     /// # Arguments
@@ -46,7 +48,7 @@ impl<'a> PE<'a, DosHeader> {
     ///
     /// returns: `PE<DosHeader>`
     #[inline(always)]
-    pub fn from_slice_assume_mapped(slice: &'a [u8], is_mapped: bool) -> Self {
+    pub unsafe fn from_slice_assume_mapped(slice: &'a [u8], is_mapped: bool) -> Self {
         unsafe { Self::from_address_assume_mapped(slice.as_ptr() as usize, is_mapped) }
     }
 }
@@ -63,9 +65,17 @@ impl PE<'_, DosHeader> {
     ///
     /// returns: `Result<PE<DosHeader>, Error>`
     #[inline(always)]
-    pub unsafe fn from_ptr(ptr: *const u8) -> std::io::Result<Self> {
+    pub fn from_ptr(ptr: *const u8) -> std::io::Result<Self> {
         Self::from_address(ptr as usize)
     }
+    /// Returns a `PE` from a `*const u8` that points to the start of a valid PE file. There is no
+    /// associated lifetime for the returned `PE`. Does not do any validation of the data at the pointer.
+    ///
+    /// # Arguments
+    ///
+    /// * `ptr`: `*const u8`
+    ///
+    /// returns: `DosHeader`
     #[inline(always)]
     pub unsafe fn from_ptr_unchecked(ptr: *const u8) -> Self {
         Self::from_address_unchecked(ptr as usize)
@@ -80,7 +90,7 @@ impl PE<'_, DosHeader> {
     /// * `base_address`: `usize`
     ///
     /// returns: `Result<PE<DosHeader>, Error>`
-    pub unsafe fn from_address(base_address: usize) -> std::io::Result<Self> {
+    pub fn from_address(base_address: usize) -> std::io::Result<Self> {
         unsafe {
             let pointer = EncodedPointer::new(base_address, false, false)?;
             let mut pe = PE {
@@ -92,7 +102,7 @@ impl PE<'_, DosHeader> {
             {
                 return Err(Error::new(
                     ErrorKind::InvalidData,
-                    format!("Magic bytes or signature did not match expected value: Dos Magic: {} Nt Signature: {}", pe.dos_header().e_magic, pe.nt_headers().signature())
+                    format!("Magic bytes or signature did not match expected value: Dos Magic: {} Nt Signature: {}", pe.dos_header().e_magic, pe.nt_headers().signature()),
                 ));
             }
 
@@ -103,6 +113,14 @@ impl PE<'_, DosHeader> {
             Ok(pe)
         }
     }
+    /// Returns a PE from a `usize` with the value of the address of a PE file. There is no associated
+    /// lifetime for the returned `PE`. Does not do any validation of the data at the address.
+    ///
+    /// # Arguments
+    ///
+    /// * `base_address`: `usize`
+    ///
+    /// returns: `PE<DosHeader>`
     pub unsafe fn from_address_unchecked(base_address: usize) -> Self {
         unsafe {
             let pointer = EncodedPointer::from_value_unchecked(base_address);
@@ -113,6 +131,16 @@ impl PE<'_, DosHeader> {
             }
         }
     }
+    /// Returns a `PE` from a `usize` with the value of the address of a PE file. There is no associated
+    /// lifetime for the returned `PE`. Assumes the mapped state of with the passed in `is_mapped`
+    /// parameter, and does not validate that the data at the address is a valid PE file.
+    ///
+    /// # Arguments
+    ///
+    /// * `base_address`: `usize`
+    /// * `is_mapped`: `bool`
+    ///
+    /// returns: `PE<DosHeader>`
     pub unsafe fn from_address_assume_mapped(base_address: usize, is_mapped: bool) -> Self {
         unsafe {
             let value = EncodedPointer::encode(base_address, is_mapped, false);
@@ -124,13 +152,17 @@ impl PE<'_, DosHeader> {
             }
         }
     }
+    /// Checks that the memory pointed to by `self.pointer` is a valid PE file.
+    ///
+    /// returns: `bool`
     pub fn validate(self) -> bool {
         self.dos_header().e_magic == IMAGE_DOS_SIGNATURE
             && self.nt_headers().signature() == IMAGE_NT_SIGNATURE
     }
-    // Check as if the file is an image on disk. We should be able to read the entire import table (or export table, if the import table is empty),
-    // as ascii strings, if it's a file on disk.
+
     fn check_mapped(self) -> Option<bool> {
+        // Check as if the file is an image on disk. We should be able to read the entire import table (or export table, if the import table is empty),
+        // as ascii strings, if it's a file on disk.
         unsafe {
             let nt_headers = self.nt_headers();
             let optional_header = nt_headers.optional_header();
@@ -192,19 +224,27 @@ impl PE<'_, DosHeader> {
 
         Some(false)
     }
-    unsafe fn check_mapped_by_section(self) -> Option<bool> {
+    fn check_mapped_by_section(self) -> Option<bool> {
         let section_headers = self.section_headers();
         let first_section_header = &section_headers[0];
         let first_section_address =
             self.base_address() + first_section_header.PointerToRawData as usize;
         let ptr_to_zero = first_section_address as *const u64;
 
-        Some(*ptr_to_zero == 0)
+        unsafe {
+            Some(*ptr_to_zero == 0)
+        }
     }
+    /// Returns a reference to the start of the PE file as an `IMAGE_DOS_HEADER`.
+    ///
+    /// returns: `&'_ IMAGE_DOS_HEADER`
     #[inline(always)]
     pub fn dos_header(&self) -> &'_ IMAGE_DOS_HEADER {
         unsafe { mem::transmute(self.pointer) }
     }
+    /// Returns the NtHeaders variant of the PE structure.
+    ///
+    /// returns: `PE<NtHeaders>`
     #[inline(always)]
     pub fn nt_headers(&self) -> PE<NtHeaders> {
         PE {
@@ -212,6 +252,9 @@ impl PE<'_, DosHeader> {
             _marker: PhantomData,
         }
     }
+    /// Returns the section headers for the PE file as a slice.
+    ///
+    /// returns: `&'_ mut [IMAGE_SECTION_HEADER]`
     #[inline(always)]
     pub fn section_headers(&self) -> &'_ [IMAGE_SECTION_HEADER] {
         let section_headers_base = self.nt_headers_address() + self.nt_headers().size_of();
@@ -227,6 +270,9 @@ impl PE<'_, DosHeader> {
             )
         }
     }
+    /// Returns the section headers for the PE file as a mutable slice.
+    ///
+    /// returns: `&'_ mut [IMAGE_SECTION_HEADER]`
     #[inline(always)]
     pub fn section_headers_mut(&self) -> &'_ mut [IMAGE_SECTION_HEADER] {
         let section_headers_base = self.nt_headers_address() + self.nt_headers().size_of();
@@ -242,6 +288,14 @@ impl PE<'_, DosHeader> {
             )
         }
     }
+    /// Takes the `Relative Virtual Address` and returns the `File Offset Address`. The return value
+    /// is an offset.
+    ///
+    /// # Arguments
+    ///
+    /// * `rva`: `u32`
+    ///
+    /// returns: `Option<u32>`
     pub fn rva_to_foa(self, rva: u32) -> Option<u32> {
         let section_headers = self.section_headers();
 
@@ -256,8 +310,11 @@ impl PE<'_, DosHeader> {
                 let foa = section_header.PointerToRawData + (rva - section_header.VirtualAddress);
                 let end_of_pe = self.base_address()
                     + self.nt_headers().optional_header().size_of_image() as usize;
+
+                // Not sure if we should break here or not. Probably should, or return None, but why not
+                // search the other headers. Maybe someone is playing tricks.
                 if end_of_pe < self.base_address() + foa as usize {
-                    break;
+                    continue;
                 }
 
                 return Some(foa);
@@ -266,7 +323,15 @@ impl PE<'_, DosHeader> {
 
         None
     }
-    pub unsafe fn get_export_rva(self, export: ExportType) -> Option<u32> {
+    /// Takes in a FunctionId and looks up the function in the Export Directory by Name or Ordinal.
+    /// Returns None if the specified function name or ordinal cannot be found.
+    ///
+    /// # Arguments
+    ///
+    /// * `export`: `FunctionId`
+    ///
+    /// returns: `Option<u32>`
+    pub unsafe fn get_export_rva(self, export: FunctionId) -> Option<u32> {
         let nt_headers = self.nt_headers();
         let optional_header = nt_headers.optional_header();
         let data_dir = optional_header.data_directory();
@@ -343,11 +408,23 @@ impl PE<'_, DosHeader> {
         }
         None
     }
+    /// Returns a `Vec<&str>` that contains the names all the functions that are exported by name for
+    /// the PE. Returns None if it could not find the export directory.
+    ///
+    /// # Arguments
+    ///
+    /// * `export`: `FunctionId`
+    ///
+    /// returns: `Option<Vec<&'_ str>>`
     pub unsafe fn get_exports(&self) -> Option<Vec<&'_ str>> {
         let nt_headers = self.nt_headers();
         let optional_header = nt_headers.optional_header();
         let data_dir = optional_header.data_directory();
         let export_data_dir = &data_dir[IMAGE_DIRECTORY_ENTRY_EXPORT as usize];
+
+        if export_data_dir.Size == 0 {
+            return None;
+        }
 
         let is_mapped = self.is_mapped();
 
@@ -373,7 +450,10 @@ impl PE<'_, DosHeader> {
         for i in 0..export_directory.NumberOfNames as usize {
             let mut string_offset = function_name_table_array[i];
             if !is_mapped {
-                string_offset = self.rva_to_foa(string_offset)?;
+                string_offset = match self.rva_to_foa(string_offset) {
+                    Some(o) => o,
+                    None => continue,
+                };
             }
 
             let string_address = self.base_address() + string_offset as usize;
@@ -381,16 +461,31 @@ impl PE<'_, DosHeader> {
                 string_address as *const u8,
                 strlen(string_address as *const u8),
             );
-            let name = std::str::from_utf8(name).ok()?;
+            let name = match std::str::from_utf8(name) {
+                Ok(s) => s,
+                _ => continue,
+            };
             names.push(name)
         }
         Some(names)
     }
+    /// Returns the name of the function with the given ordinal value. Returns `None` if the Export
+    /// directory cannot be found, or the provided ordinal is not found.
+    ///
+    /// # Arguments
+    ///
+    /// * `ordinal`: `u16`
+    ///
+    /// returns: `Option<String>`
     pub unsafe fn get_export_name(self, ordinal: u16) -> Option<String> {
         let nt_headers = self.nt_headers();
         let optional_header = nt_headers.optional_header();
         let data_dir = optional_header.data_directory();
         let export_data_dir = &data_dir[IMAGE_DIRECTORY_ENTRY_EXPORT as usize];
+
+        if export_data_dir.Size == 0 {
+            return None;
+        }
 
         let is_mapped = self.is_mapped();
 
@@ -435,6 +530,14 @@ impl PE<'_, DosHeader> {
 
         None
     }
+    /// Returns the ordinal of the function with the given name provided as a slice of bytes. Returns
+    /// `None` if the Export directory cannot be found, or the provided ordinal is not found.
+    ///
+    /// # Arguments
+    ///
+    /// * `function_name`: `&[u8]`
+    ///
+    /// returns: `u16`
     pub fn get_function_ordinal(self, function_name: &[u8]) -> u16 {
         unsafe {
             let base_addr = self.base_address();
@@ -470,12 +573,25 @@ impl PE<'_, DosHeader> {
 
         0
     }
-
+    /// Looks up the Resource entry with the provided category and resource id. Currently assumes
+    /// the first directory in the language entries. Returns the resource as a `&[u8]`, or `None` if
+    /// the resource directory or resource could not be found.
+    ///
+    /// # Arguments
+    ///
+    /// * `category_id`: `u32`
+    /// * `resource_id`: `u32`
+    ///
+    /// returns: `Option<&[u8]>`
     pub fn get_pe_resource(&self, category_id: u32, resource_id: u32) -> Option<&'_ [u8]> {
         let nt_headers = self.nt_headers();
         let optional_header = nt_headers.optional_header();
         let resource_data_dir =
             &optional_header.data_directory()[IMAGE_DIRECTORY_ENTRY_RESOURCE as usize];
+
+        if resource_data_dir.Size == 0 {
+            return None;
+        }
 
         let is_mapped = self.is_mapped();
 

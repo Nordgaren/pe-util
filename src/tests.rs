@@ -9,7 +9,7 @@ use std::fs;
 use std::mem::size_of;
 use util::get_system_dir;
 use crate::dos_header::DosHeader;
-use crate::dos_header::ExportType::*;
+use crate::dos_header::FunctionId::*;
 use crate::nt_headers::NtHeaders;
 use crate::optional_header::ImageOptionalHeader;
 
