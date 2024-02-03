@@ -1,4 +1,5 @@
 #![allow(unused)]
+#![doc = include_str!("../README.md")]
 
 use crate::consts::{
     IMAGE_DIRECTORY_ENTRY_EXPORT, IMAGE_DIRECTORY_ENTRY_IMPORT, IMAGE_DIRECTORY_ENTRY_RESOURCE,
@@ -27,8 +28,28 @@ mod resource;
 mod tests;
 mod util;
 
-/// A pointer sized type that allows the user to treat a buffer in memory as a Windows PE. Currently only supports 32-bit
+/// A pointer sized type that allows the user to read a buffer in memory as a Windows PE. Currently only supports 32-bit
 /// and 64-bit PEs on x86 architectures, but, I plan on supporting more architectures in the future.
+/// This type is indifferent to 32 or 64-bit architecture, as well as wether or not the file has been mapped into memory
+/// for execution, or if the file is still in it's on disk stat.
+///
+/// # Example
+/// ```rust
+/// # use pe_util::PE;
+/// fn example(slice: &[u8]) {
+///     let pe = PE::from_slice(slice).expect("Could not validate that slice is a valid PE file.");
+///     let exports = pe.get_exports();
+///
+///     for export in exports {
+///         let ord = pe.get_function_ordinal(export.as_bytes());
+///         println!("Export: {export} Ordinal: {ord}");
+///     }
+///
+///     let res = pe.get_pe_resource(10, 100).expect("Could not find PE resource");
+///
+///     println!("{}", res.len());
+/// }
+/// ```
 #[derive(Copy, Clone)]
 pub struct PE<'a, S> {
     pointer: EncodedPointer,
