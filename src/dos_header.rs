@@ -54,6 +54,7 @@ impl<'a> PE<'a, DosHeader> {
     /// returns: `PE<DosHeader`
     ///
     /// # Safety
+    ///
     /// This function does not check EncodedPointer compatability, mapped state, nor that the slice is a valid PE file.
     #[inline(always)]
     pub unsafe fn from_slice_unchecked(slice: &'a [u8]) -> Self {
