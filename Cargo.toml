@@ -6,4 +6,4 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-encoded-pointer = { path = "../encoded-pointer" }
+encoded-pointer = { git = "https://github.com/Nordgaren/encoded-pointer.git" }
