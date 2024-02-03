@@ -1,9 +1,9 @@
+use crate::definitions::{IMAGE_FILE_HEADER, IMAGE_NT_HEADERS32, IMAGE_NT_HEADERS64};
+use crate::optional_header::ImageOptionalHeader;
+use crate::PE;
 use std::marker::PhantomData;
 use std::mem;
 use std::mem::size_of;
-use crate::PE;
-use crate::definitions::{IMAGE_FILE_HEADER, IMAGE_NT_HEADERS32, IMAGE_NT_HEADERS64};
-use crate::optional_header::ImageOptionalHeader;
 /// ZST that represents the IMAGE_NT_HEADERS portion of the PE file
 #[derive(Copy, Clone)]
 pub struct NtHeaders;

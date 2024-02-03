@@ -13,10 +13,10 @@ pub fn case_insensitive_compare_strs_as_bytes(
         let mut val = string_bytes[i];
         let mut val2 = other_string_bytes[i];
 
-        if val >= 0x41 && val <= 0x5A {
+        if (0x41..=0x5A).contains(&val) {
             val ^= CASE_BIT
         }
-        if val2 >= 0x41 && val2 <= 0x5A {
+        if (0x41..=0x5A).contains(&val2) {
             val2 ^= CASE_BIT
         }
 

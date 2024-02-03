@@ -3,15 +3,15 @@
 extern crate alloc;
 
 use crate::consts::{IMAGE_FILE_MACHINE_AMD64, IMAGE_FILE_MACHINE_FLAG, IMAGE_FILE_MACHINE_I386};
+use crate::dos_header::DosHeader;
+use crate::dos_header::FunctionId::*;
+use crate::nt_headers::NtHeaders;
+use crate::optional_header::ImageOptionalHeader;
 use crate::resource::icon::{GRPICONDIR, GRPICONDIRENTRY};
 use crate::PE;
 use std::fs;
 use std::mem::size_of;
 use util::get_system_dir;
-use crate::dos_header::DosHeader;
-use crate::dos_header::FunctionId::*;
-use crate::nt_headers::NtHeaders;
-use crate::optional_header::ImageOptionalHeader;
 
 #[link(name = "kernel32", kind = "raw-dylib")]
 extern "system" {
@@ -45,9 +45,9 @@ fn pe_from_file_32() {
 fn pe_from_file_64() {
     let path = get_system_dir().expect("Could not get system directory");
     let path = path.as_str();
-    #[cfg(any(target_arch = "x86_64"))]
+    #[cfg(target_arch = "x86_64")]
     let file = fs::read(format!("{path}\\notepad.exe")).unwrap();
-    #[cfg(any(target_arch = "x86"))]
+    #[cfg(target_arch = "x86")]
     let file = fs::read(format!("{path}\\..\\Sysnative\\notepad.exe")).unwrap();
     let pe = PE::from_slice(file.as_slice()).unwrap();
     assert_eq!(

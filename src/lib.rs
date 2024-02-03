@@ -4,8 +4,12 @@ use crate::consts::{
     IMAGE_DIRECTORY_ENTRY_EXPORT, IMAGE_DIRECTORY_ENTRY_IMPORT, IMAGE_DIRECTORY_ENTRY_RESOURCE,
     IMAGE_DOS_SIGNATURE, IMAGE_NT_SIGNATURE, MAX_SECTION_HEADER_LEN,
 };
-use crate::definitions::{IMAGE_DATA_DIRECTORY, IMAGE_DOS_HEADER, IMAGE_EXPORT_DIRECTORY, IMAGE_FILE_HEADER, IMAGE_IMPORT_DESCRIPTOR, IMAGE_RESOURCE_DIRECTORY_ENTRY, IMAGE_SECTION_HEADER, RESOURCE_DATA_ENTRY, RESOURCE_DIRECTORY_TABLE};
 use crate::definitions::IMAGE_NT_HEADERS32;
+use crate::definitions::{
+    IMAGE_DATA_DIRECTORY, IMAGE_DOS_HEADER, IMAGE_EXPORT_DIRECTORY, IMAGE_FILE_HEADER,
+    IMAGE_IMPORT_DESCRIPTOR, IMAGE_RESOURCE_DIRECTORY_ENTRY, IMAGE_SECTION_HEADER,
+    RESOURCE_DATA_ENTRY, RESOURCE_DIRECTORY_TABLE,
+};
 use crate::util::{case_insensitive_compare_strs_as_bytes, strlen};
 use core::marker::PhantomData;
 use core::mem::size_of;
@@ -16,12 +20,12 @@ use std::io::{Error, ErrorKind};
 
 mod consts;
 mod definitions;
+mod dos_header;
+mod nt_headers;
+mod optional_header;
 mod resource;
 mod tests;
 mod util;
-mod nt_headers;
-mod optional_header;
-mod dos_header;
 
 /// A pointer sized type that allows the user to treat a buffer in memory as a Windows PE. Currently only supports 32-bit
 /// and 64-bit PEs on x86 architectures, but, I plan on supporting more architectures in the future.
@@ -59,15 +63,10 @@ impl<S> PE<'_, S> {
     #[inline(always)]
     pub fn is_64bit(self) -> bool {
         let nt_headers = self.nt_headers_address() as *const IMAGE_NT_HEADERS32;
-        match unsafe { (*nt_headers).FileHeader.Machine } {
-            0x200 => true,
-            0x284 => true,
-            0x5064 => true,
-            0x6264 => true,
-            0x8664 => true,
-            0xAA64 => true,
-            _ => false,
-        }
+        matches!(
+            unsafe { (*nt_headers).FileHeader.Machine },
+            0x200 | 0x284 | 0x5064 | 0x6264 | 0x8664 | 0xAA64
+        )
     }
     /// Returns true if the PE is mapped into memory, or false is in it's "on disk" state.
     ///
@@ -130,7 +129,7 @@ unsafe fn get_entry_offset_by_id(
     let resource_entries_address = addr_of!(*resource_directory_table) as usize
         + size_of::<RESOURCE_DIRECTORY_TABLE>()
         + (size_of::<IMAGE_RESOURCE_DIRECTORY_ENTRY>()
-        * resource_directory_table.NumberOfNameEntries as usize);
+            * resource_directory_table.NumberOfNameEntries as usize);
     let resource_directory_entries = slice::from_raw_parts(
         resource_entries_address as *const IMAGE_RESOURCE_DIRECTORY_ENTRY,
         resource_directory_table.NumberOfIDEntries as usize,

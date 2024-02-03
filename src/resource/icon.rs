@@ -1,4 +1,5 @@
 #![allow(non_snake_case)]
+#![allow(clippy::upper_case_acronyms)]
 use std::ptr::addr_of;
 
 // I am not sure if I should do this for both structures, or just have to user add the size of `GRPICONDIR`

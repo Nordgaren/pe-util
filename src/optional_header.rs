@@ -1,7 +1,8 @@
+use crate::definitions::{IMAGE_DATA_DIRECTORY, IMAGE_OPTIONAL_HEADER32, IMAGE_OPTIONAL_HEADER64};
+use crate::PE;
 use std::mem;
 use std::mem::size_of;
-use crate::PE;
-use crate::definitions::{IMAGE_DATA_DIRECTORY, IMAGE_OPTIONAL_HEADER32, IMAGE_OPTIONAL_HEADER64};
+
 /// ZST that represents the IMAGE_OPTIONAL_HEADER portion of the PE file
 #[derive(Copy, Clone)]
 pub struct ImageOptionalHeader;

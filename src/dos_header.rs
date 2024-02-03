@@ -1,20 +1,27 @@
-use std::io::{Error, ErrorKind};
-use std::marker::PhantomData;
-use std::{cmp, mem};
-use std::mem::size_of;
-use std::str::Utf8Error;
-use encoded_pointer::encoded::EncodedPointer;
-use crate::{get_resource_data_entry, PE};
-use crate::consts::{IMAGE_DIRECTORY_ENTRY_EXPORT, IMAGE_DIRECTORY_ENTRY_IMPORT, IMAGE_DIRECTORY_ENTRY_RESOURCE, IMAGE_DOS_SIGNATURE, IMAGE_NT_SIGNATURE, MAX_SECTION_HEADER_LEN};
-use crate::definitions::{IMAGE_DATA_DIRECTORY, IMAGE_DOS_HEADER, IMAGE_EXPORT_DIRECTORY, IMAGE_IMPORT_DESCRIPTOR, IMAGE_NT_HEADERS32, IMAGE_SECTION_HEADER, RESOURCE_DIRECTORY_TABLE};
+use crate::consts::{
+    IMAGE_DIRECTORY_ENTRY_EXPORT, IMAGE_DIRECTORY_ENTRY_IMPORT, IMAGE_DIRECTORY_ENTRY_RESOURCE,
+    IMAGE_DOS_SIGNATURE, IMAGE_NT_SIGNATURE, MAX_SECTION_HEADER_LEN,
+};
+use crate::definitions::{
+    IMAGE_DATA_DIRECTORY, IMAGE_DOS_HEADER, IMAGE_EXPORT_DIRECTORY, IMAGE_IMPORT_DESCRIPTOR,
+    IMAGE_NT_HEADERS32, IMAGE_SECTION_HEADER, RESOURCE_DIRECTORY_TABLE,
+};
 use crate::dos_header::FunctionId::{Name, Ordinal};
 use crate::nt_headers::NtHeaders;
 use crate::util::{case_insensitive_compare_strs_as_bytes, strlen};
+use crate::{get_resource_data_entry, PE};
+use encoded_pointer::encoded::EncodedPointer;
+use std::io::{Error, ErrorKind};
+use std::marker::PhantomData;
+use std::mem::size_of;
+use std::str::Utf8Error;
+use std::{cmp, mem};
 
 /// ZST that represents the IMAGE_DOS_HEADER portion of the PE file, as well as most of the base
 /// functionality that shouldn't be shared with the other typestates.
 #[derive(Copy, Clone)]
 pub struct DosHeader;
+
 /// An enum that represents the various types of ways a function can be Imported or Exported in a PE
 /// file.
 pub enum FunctionId<'a> {
@@ -47,6 +54,11 @@ impl<'a> PE<'a, DosHeader> {
     /// * `is_mapped`: `bool`
     ///
     /// returns: `PE<DosHeader>`
+    ///
+    /// # Safety
+    ///
+    /// This function does not check `EncodedPointer` compatability, mapped state, nor that the slice is
+    /// a valid PE file.
     #[inline(always)]
     pub unsafe fn from_slice_assume_mapped(slice: &'a [u8], is_mapped: bool) -> Self {
         unsafe { Self::from_address_assume_mapped(slice.as_ptr() as usize, is_mapped) }
@@ -76,6 +88,11 @@ impl PE<'_, DosHeader> {
     /// * `ptr`: `*const u8`
     ///
     /// returns: `DosHeader`
+    ///
+    /// # Safety
+    ///
+    /// This function does not check `EncodedPointer` compatability, mapped state, nor that the pointer
+    /// points to a valid PE file.
     #[inline(always)]
     pub unsafe fn from_ptr_unchecked(ptr: *const u8) -> Self {
         Self::from_address_unchecked(ptr as usize)
@@ -91,27 +108,22 @@ impl PE<'_, DosHeader> {
     ///
     /// returns: `Result<PE<DosHeader>, Error>`
     pub fn from_address(base_address: usize) -> std::io::Result<Self> {
-        unsafe {
-            let pointer = EncodedPointer::new(base_address, false, false)?;
-            let mut pe = PE {
-                pointer,
-                _marker: PhantomData,
-            };
+        let mut pe = PE {
+            pointer: EncodedPointer::new(base_address, false, false)?,
+            _marker: PhantomData,
+        };
 
-            if !pe.validate()
-            {
-                return Err(Error::new(
-                    ErrorKind::InvalidData,
-                    format!("Magic bytes or signature did not match expected value: Dos Magic: {} Nt Signature: {}", pe.dos_header().e_magic, pe.nt_headers().signature()),
-                ));
-            }
-
-
-            let is_mapped = pe.check_mapped().unwrap_or(true);
-            pe.pointer.set_bool_one(is_mapped);
-
-            Ok(pe)
+        if !pe.validate() {
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                format!("Magic bytes or signature did not match expected value: Dos Magic: {} Nt Signature: {}", pe.dos_header().e_magic, pe.nt_headers().signature()),
+            ));
         }
+
+        let is_mapped = unsafe { pe.check_mapped() }.unwrap_or(true);
+        pe.pointer.set_bool_one(is_mapped);
+
+        Ok(pe)
     }
     /// Returns a PE from a `usize` with the value of the address of a PE file. There is no associated
     /// lifetime for the returned `PE`. Does not do any validation of the data at the address.
@@ -121,14 +133,15 @@ impl PE<'_, DosHeader> {
     /// * `base_address`: `usize`
     ///
     /// returns: `PE<DosHeader>`
+    ///
+    /// # Safety
+    ///
+    /// This function does not check `EncodedPointer` compatability, mapped state, nor that the address
+    /// provided points to a valid PE file.
     pub unsafe fn from_address_unchecked(base_address: usize) -> Self {
-        unsafe {
-            let pointer = EncodedPointer::from_value_unchecked(base_address);
-
-            PE {
-                pointer,
-                _marker: PhantomData,
-            }
+        PE {
+            pointer: EncodedPointer::from_value_unchecked(base_address),
+            _marker: PhantomData,
         }
     }
     /// Returns a `PE` from a `usize` with the value of the address of a PE file. There is no associated
@@ -141,15 +154,17 @@ impl PE<'_, DosHeader> {
     /// * `is_mapped`: `bool`
     ///
     /// returns: `PE<DosHeader>`
+    ///
+    /// # Safety
+    ///
+    /// This function does not check `EncodedPointer` compatability, mapped state, nor that the pointer
+    /// points to a valid PE file.
     pub unsafe fn from_address_assume_mapped(base_address: usize, is_mapped: bool) -> Self {
-        unsafe {
-            let value = EncodedPointer::encode(base_address, is_mapped, false);
-            let pointer = EncodedPointer::from_value_unchecked(value);
+        let value = EncodedPointer::encode(base_address, is_mapped, false);
 
-            PE {
-                pointer,
-                _marker: PhantomData,
-            }
+        PE {
+            pointer: EncodedPointer::from_value_unchecked(value),
+            _marker: PhantomData,
         }
     }
     /// Checks that the memory pointed to by `self.pointer` is a valid PE file.
@@ -160,42 +175,40 @@ impl PE<'_, DosHeader> {
             && self.nt_headers().signature() == IMAGE_NT_SIGNATURE
     }
 
-    fn check_mapped(self) -> Option<bool> {
+    unsafe fn check_mapped(self) -> Option<bool> {
         // Check as if the file is an image on disk. We should be able to read the entire import table (or export table, if the import table is empty),
         // as ascii strings, if it's a file on disk.
-        unsafe {
-            let nt_headers = self.nt_headers();
-            let optional_header = nt_headers.optional_header();
-            let data_dir = optional_header.data_directory();
-            let import_data_dir = &data_dir[IMAGE_DIRECTORY_ENTRY_IMPORT as usize];
-            if import_data_dir.Size == 0 {
-                return self.check_mapped_export_dir(data_dir);
-            }
-
-            let import_table_addr =
-                self.base_address() + self.rva_to_foa(import_data_dir.VirtualAddress)? as usize;
-            let length = import_data_dir.Size as usize / size_of::<IMAGE_IMPORT_DESCRIPTOR>();
-
-            let import_descriptor_table = std::slice::from_raw_parts(
-                import_table_addr as *const IMAGE_IMPORT_DESCRIPTOR,
-                // The last entry is all 0s to denote the end of the table.
-                length - 1,
-            );
-
-            for import_descriptor in import_descriptor_table {
-                let string_foa = self.rva_to_foa(import_descriptor.Name)?;
-                let string_addr = self.base_address() + string_foa as usize;
-                let string = std::slice::from_raw_parts(
-                    string_addr as *const u8,
-                    strlen(string_addr as *const u8),
-                );
-                if !string.is_ascii() {
-                    return Some(true);
-                }
-            }
-
-            Some(false)
+        let nt_headers = self.nt_headers();
+        let optional_header = nt_headers.optional_header();
+        let data_dir = optional_header.data_directory();
+        let import_data_dir = &data_dir[IMAGE_DIRECTORY_ENTRY_IMPORT as usize];
+        if import_data_dir.Size == 0 {
+            return self.check_mapped_export_dir(data_dir);
         }
+
+        let import_table_addr =
+            self.base_address() + self.rva_to_foa(import_data_dir.VirtualAddress)? as usize;
+        let length = import_data_dir.Size as usize / size_of::<IMAGE_IMPORT_DESCRIPTOR>();
+
+        let import_descriptor_table = std::slice::from_raw_parts(
+            import_table_addr as *const IMAGE_IMPORT_DESCRIPTOR,
+            // The last entry is all 0s to denote the end of the table.
+            length - 1,
+        );
+
+        for import_descriptor in import_descriptor_table {
+            let string_foa = self.rva_to_foa(import_descriptor.Name)?;
+            let string_addr = self.base_address() + string_foa as usize;
+            let string = std::slice::from_raw_parts(
+                string_addr as *const u8,
+                strlen(string_addr as *const u8),
+            );
+            if !string.is_ascii() {
+                return Some(true);
+            }
+        }
+
+        Some(false)
     }
     unsafe fn check_mapped_export_dir(self, data_dir: &[IMAGE_DATA_DIRECTORY]) -> Option<bool> {
         let export_data_dir = &data_dir[IMAGE_DIRECTORY_ENTRY_EXPORT as usize];
@@ -215,8 +228,10 @@ impl PE<'_, DosHeader> {
         for rva in function_name_table {
             let string_foa = self.rva_to_foa(*rva)?;
             let string_addr = self.base_address() + string_foa as usize;
-            let string =
-                std::slice::from_raw_parts(string_addr as *const u8, strlen(string_addr as *const u8));
+            let string = std::slice::from_raw_parts(
+                string_addr as *const u8,
+                strlen(string_addr as *const u8),
+            );
             if !string.is_ascii() {
                 return Some(true);
             }
@@ -231,9 +246,7 @@ impl PE<'_, DosHeader> {
             self.base_address() + first_section_header.PointerToRawData as usize;
         let ptr_to_zero = first_section_address as *const u64;
 
-        unsafe {
-            Some(*ptr_to_zero == 0)
-        }
+        unsafe { Some(*ptr_to_zero == 0) }
     }
     /// Returns a reference to the start of the PE file as an `IMAGE_DOS_HEADER`.
     ///
@@ -274,7 +287,7 @@ impl PE<'_, DosHeader> {
     ///
     /// returns: `&'_ mut [IMAGE_SECTION_HEADER]`
     #[inline(always)]
-    pub fn section_headers_mut(&self) -> &'_ mut [IMAGE_SECTION_HEADER] {
+    pub fn section_headers_mut(&mut self) -> &'_ mut [IMAGE_SECTION_HEADER] {
         let section_headers_base = self.nt_headers_address() + self.nt_headers().size_of();
         unsafe {
             std::slice::from_raw_parts_mut(
@@ -331,7 +344,7 @@ impl PE<'_, DosHeader> {
     /// * `export`: `FunctionId`
     ///
     /// returns: `Option<u32>`
-    pub unsafe fn get_export_rva(self, export: FunctionId) -> Option<u32> {
+    pub fn get_export_rva(self, export: FunctionId) -> Option<u32> {
         let nt_headers = self.nt_headers();
         let optional_header = nt_headers.optional_header();
         let data_dir = optional_header.data_directory();
@@ -345,16 +358,18 @@ impl PE<'_, DosHeader> {
         }
 
         let export_directory: &'static IMAGE_EXPORT_DIRECTORY =
-            mem::transmute(self.base_address() + export_directory_offset as usize);
+            unsafe { mem::transmute(self.base_address() + export_directory_offset as usize) };
 
         let mut export_address_table_rva = export_directory.AddressOfFunctions;
         if !is_mapped {
             export_address_table_rva = self.rva_to_foa(export_address_table_rva)?;
         }
-        let export_address_table_array = std::slice::from_raw_parts(
-            (self.base_address() + export_address_table_rva as usize) as *const u32,
-            export_directory.NumberOfFunctions as usize,
-        );
+        let export_address_table_array = unsafe {
+            std::slice::from_raw_parts(
+                (self.base_address() + export_address_table_rva as usize) as *const u32,
+                export_directory.NumberOfFunctions as usize,
+            )
+        };
 
         match export {
             Ordinal(ordinal) => {
@@ -373,10 +388,12 @@ impl PE<'_, DosHeader> {
                     name_table_offset = self.rva_to_foa(name_table_offset)?;
                 }
 
-                let function_name_table_array = std::slice::from_raw_parts(
-                    (self.base_address() + name_table_offset as usize) as *const u32,
-                    export_directory.NumberOfNames as usize,
-                );
+                let function_name_table_array = unsafe {
+                    std::slice::from_raw_parts(
+                        (self.base_address() + name_table_offset as usize) as *const u32,
+                        export_directory.NumberOfNames as usize,
+                    )
+                };
 
                 for i in 0..export_directory.NumberOfNames as usize {
                     let mut string_offset = function_name_table_array[i];
@@ -385,10 +402,12 @@ impl PE<'_, DosHeader> {
                     }
 
                     let string_address = self.base_address() + string_offset as usize;
-                    let name = std::slice::from_raw_parts(
-                        string_address as *const u8,
-                        strlen(string_address as *const u8),
-                    );
+                    let name = unsafe {
+                        std::slice::from_raw_parts(
+                            string_address as *const u8,
+                            strlen(string_address as *const u8),
+                        )
+                    };
 
                     if case_insensitive_compare_strs_as_bytes(export_name.as_bytes(), name) {
                         let mut hints_table_offset = export_directory.AddressOfNameOrdinals;
@@ -396,10 +415,12 @@ impl PE<'_, DosHeader> {
                             hints_table_offset = self.rva_to_foa(hints_table_offset)?;
                         }
 
-                        let hints_table_array = std::slice::from_raw_parts(
-                            (self.base_address() + hints_table_offset as usize) as *const u16,
-                            export_directory.NumberOfNames as usize,
-                        );
+                        let hints_table_array = unsafe {
+                            std::slice::from_raw_parts(
+                                (self.base_address() + hints_table_offset as usize) as *const u16,
+                                export_directory.NumberOfNames as usize,
+                            )
+                        };
 
                         return Some(export_address_table_array[hints_table_array[i] as usize]);
                     }
@@ -416,7 +437,7 @@ impl PE<'_, DosHeader> {
     /// * `export`: `FunctionId`
     ///
     /// returns: `Option<Vec<&'_ str>>`
-    pub unsafe fn get_exports(&self) -> Option<Vec<&'_ str>> {
+    pub fn get_exports(&self) -> Option<Vec<&'_ str>> {
         let nt_headers = self.nt_headers();
         let optional_header = nt_headers.optional_header();
         let data_dir = optional_header.data_directory();
@@ -434,21 +455,23 @@ impl PE<'_, DosHeader> {
         }
 
         let export_directory: &'static IMAGE_EXPORT_DIRECTORY =
-            mem::transmute(self.base_address() + export_directory_offset as usize);
+            unsafe { mem::transmute(self.base_address() + export_directory_offset as usize) };
 
         let mut name_table_offset = export_directory.AddressOfNames;
         if !is_mapped {
             name_table_offset = self.rva_to_foa(name_table_offset)?;
         }
 
-        let function_name_table_array = std::slice::from_raw_parts(
-            (self.base_address() + name_table_offset as usize) as *const u32,
-            export_directory.NumberOfNames as usize,
-        );
+        let function_name_table_array = unsafe {
+            std::slice::from_raw_parts(
+                (self.base_address() + name_table_offset as usize) as *const u32,
+                export_directory.NumberOfNames as usize,
+            )
+        };
 
         let mut names = vec![];
-        for i in 0..export_directory.NumberOfNames as usize {
-            let mut string_offset = function_name_table_array[i];
+        for offset in function_name_table_array {
+            let mut string_offset = *offset;
             if !is_mapped {
                 string_offset = match self.rva_to_foa(string_offset) {
                     Some(o) => o,
@@ -457,10 +480,12 @@ impl PE<'_, DosHeader> {
             }
 
             let string_address = self.base_address() + string_offset as usize;
-            let name = std::slice::from_raw_parts(
-                string_address as *const u8,
-                strlen(string_address as *const u8),
-            );
+            let name = unsafe {
+                std::slice::from_raw_parts(
+                    string_address as *const u8,
+                    strlen(string_address as *const u8),
+                )
+            };
             let name = match std::str::from_utf8(name) {
                 Ok(s) => s,
                 _ => continue,
@@ -477,7 +502,7 @@ impl PE<'_, DosHeader> {
     /// * `ordinal`: `u16`
     ///
     /// returns: `Option<String>`
-    pub unsafe fn get_export_name(self, ordinal: u16) -> Option<String> {
+    pub fn get_export_name(self, ordinal: u16) -> Option<String> {
         let nt_headers = self.nt_headers();
         let optional_header = nt_headers.optional_header();
         let data_dir = optional_header.data_directory();
@@ -495,19 +520,21 @@ impl PE<'_, DosHeader> {
         }
 
         let export_directory: &'static IMAGE_EXPORT_DIRECTORY =
-            mem::transmute(self.base_address() + export_directory_offset as usize);
+            unsafe { mem::transmute(self.base_address() + export_directory_offset as usize) };
 
         let mut name_table_offset = export_directory.AddressOfNames;
         if !is_mapped {
             name_table_offset = self.rva_to_foa(name_table_offset)?;
         }
 
-        let function_name_table_array = std::slice::from_raw_parts(
-            (self.base_address() + name_table_offset as usize) as *const u32,
-            export_directory.NumberOfNames as usize,
-        );
+        let function_name_table_array = unsafe {
+            std::slice::from_raw_parts(
+                (self.base_address() + name_table_offset as usize) as *const u32,
+                export_directory.NumberOfNames as usize,
+            )
+        };
 
-        for i in 0..export_directory.NumberOfNames as usize {
+        for offset in function_name_table_array {
             let ordinal = ordinal as u32;
             let base = export_directory.Base;
 
@@ -515,16 +542,18 @@ impl PE<'_, DosHeader> {
                 continue;
             }
 
-            let mut string_offset = function_name_table_array[i];
+            let mut string_offset = *offset;
             if !is_mapped {
                 string_offset = self.rva_to_foa(string_offset)?;
             }
 
             let string_address = self.base_address() + string_offset as usize;
-            let name = std::slice::from_raw_parts(
-                string_address as *const u8,
-                strlen(string_address as *const u8),
-            );
+            let name = unsafe {
+                std::slice::from_raw_parts(
+                    string_address as *const u8,
+                    strlen(string_address as *const u8),
+                )
+            };
             return String::from_utf8(name.to_vec()).ok();
         }
 
