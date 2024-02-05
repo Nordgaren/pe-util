@@ -5,9 +5,16 @@ use std::mem::size_of;
 
 /// ZST that represents the IMAGE_OPTIONAL_HEADER portion of the PE file
 #[derive(Copy, Clone)]
-pub struct ImageOptionalHeader;
+pub struct ImageOptionalHeader<T>;
 
-impl PE<'_, ImageOptionalHeader> {
+#[derive(Copy, Clone)]
+pub struct Mut;
+#[derive(Copy, Clone)]
+pub struct Const;
+
+
+
+impl<T> PE<'_, ImageOptionalHeader<T>> {
     #[inline(always)]
     fn optional_header32(&self) -> &'_ IMAGE_OPTIONAL_HEADER32 {
         unsafe { mem::transmute(self.optional_header_address()) }
@@ -230,6 +237,225 @@ impl PE<'_, ImageOptionalHeader> {
             size_of::<IMAGE_OPTIONAL_HEADER64>()
         } else {
             size_of::<IMAGE_OPTIONAL_HEADER32>()
+        }
+    }
+}
+
+impl PE<'_, ImageOptionalHeader<Mut>> {
+    #[inline(always)]
+    fn optional_header32_mut(&mut self) -> &'_ mut IMAGE_OPTIONAL_HEADER32 {
+        unsafe { mem::transmute(self.optional_header_address()) }
+    }
+    #[inline(always)]
+    fn optional_header64_mut(&mut self) -> &'_ mut IMAGE_OPTIONAL_HEADER64 {
+        unsafe { mem::transmute(self.optional_header_address()) }
+    }
+    #[inline(always)]
+    pub fn set_magic(&mut self, value: u16) {
+        self.optional_header32_mut().Magic = value
+    }
+    #[inline(always)]
+    pub fn set_major_linker_version(&mut self, value: u8) {
+        self.optional_header32_mut().MajorLinkerVersion = value
+    }
+    #[inline(always)]
+    pub fn set_minor_linker_version(&mut self, value: u8) {
+        self.optional_header32_mut().MinorLinkerVersion = value
+    }
+    #[inline(always)]
+    pub fn set_size_of_code(&mut self, value: u32) {
+        self.optional_header32_mut().SizeOfCode = value
+    }
+    #[inline(always)]
+    pub fn set_size_of_initialized_data(&mut self, value: u32) {
+        self.optional_header32_mut().SizeOfInitializedData = value
+    }
+    #[inline(always)]
+    pub fn set_size_of_uninitialized_data(&mut self, value: u32) {
+        self.optional_header32_mut().SizeOfUninitializedData = value
+    }
+    #[inline(always)]
+    pub fn set_address_of_entry_point(&mut self, value: u32) {
+        self.optional_header32_mut().AddressOfEntryPoint = value
+    }
+    #[inline(always)]
+    pub fn set_base_of_code(&mut self, value: u32) {
+        self.optional_header32_mut().BaseOfCode = value
+    }
+    #[inline(always)]
+    pub fn set_image_base(&mut self, value: u64) {
+        if self.is_64bit() {
+            self.optional_header64_mut().ImageBase = value
+        } else {
+            self.optional_header32_mut().ImageBase = value as u32
+        }
+    }
+    #[inline(always)]
+    pub fn set_section_alignment(&mut self, value: u32) {
+        if self.is_64bit() {
+            self.optional_header64_mut().SectionAlignment = value
+        } else {
+            self.optional_header32_mut().SectionAlignment = value
+        }
+    }
+    #[inline(always)]
+    pub fn set_file_alignment(&mut self, value: u32) {
+        if self.is_64bit() {
+            self.optional_header64_mut().FileAlignment = value
+        } else {
+            self.optional_header32_mut().FileAlignment = value
+        }
+    }
+    #[inline(always)]
+    pub fn set_major_operating_system_version(&mut self, value: u16) {
+        if self.is_64bit() {
+            self.optional_header64_mut().MajorOperatingSystemVersion = value
+        } else {
+            self.optional_header32_mut().MajorOperatingSystemVersion = value
+        }
+    }
+    #[inline(always)]
+    pub fn set_minor_operating_system_version(&mut self, value: u16) {
+        if self.is_64bit() {
+            self.optional_header64_mut().MinorOperatingSystemVersion = value
+        } else {
+            self.optional_header32_mut().MinorOperatingSystemVersion = value
+        }
+    }
+    #[inline(always)]
+    pub fn set_major_image_version(&mut self, value: u16) {
+        if self.is_64bit() {
+            self.optional_header64_mut().MajorImageVersion = value
+        } else {
+            self.optional_header32_mut().MajorImageVersion = value
+        }
+    }
+    #[inline(always)]
+    pub fn set_minor_image_version(&mut self, value: u16) {
+        if self.is_64bit() {
+            self.optional_header64_mut().MinorImageVersion = value
+        } else {
+            self.optional_header32_mut().MinorImageVersion = value
+        }
+    }
+    #[inline(always)]
+    pub fn set_major_subsystem_version(&mut self, value: u16) {
+        if self.is_64bit() {
+            self.optional_header64_mut().MajorSubsystemVersion = value
+        } else {
+            self.optional_header32_mut().MajorSubsystemVersion = value
+        }
+    }
+    #[inline(always)]
+    pub fn set_minor_subsystem_version(&mut self, value: u16) {
+        if self.is_64bit() {
+            self.optional_header64_mut().MinorSubsystemVersion = value
+        } else {
+            self.optional_header32_mut().MinorSubsystemVersion = value
+        }
+    }
+    #[inline(always)]
+    pub fn set_win32_version_value(&mut self, value: u32) {
+        if self.is_64bit() {
+            self.optional_header64_mut().Win32VersionValue = value
+        } else {
+            self.optional_header32_mut().Win32VersionValue = value
+        }
+    }
+    #[inline(always)]
+    pub fn set_size_of_image(&mut self, value: u32) {
+        if self.is_64bit() {
+            self.optional_header64_mut().SizeOfImage = value
+        } else {
+            self.optional_header32_mut().SizeOfImage = value
+        }
+    }
+    #[inline(always)]
+    pub fn set_size_of_headers(&mut self, value: u32) {
+        if self.is_64bit() {
+            self.optional_header64_mut().SizeOfHeaders = value
+        } else {
+            self.optional_header32_mut().SizeOfHeaders = value
+        }
+    }
+    #[inline(always)]
+    pub fn set_check_sum(&mut self, value: u32) {
+        if self.is_64bit() {
+            self.optional_header64_mut().CheckSum = value
+        } else {
+            self.optional_header32_mut().CheckSum = value
+        }
+    }
+    #[inline(always)]
+    pub fn set_subsystem(&mut self, value: u16) {
+        if self.is_64bit() {
+            self.optional_header64_mut().Subsystem = value
+        } else {
+            self.optional_header32_mut().Subsystem = value
+        }
+    }
+    #[inline(always)]
+    pub fn set_dll_characteristics(&mut self, value: u16) {
+        if self.is_64bit() {
+            self.optional_header64_mut().DllCharacteristics = value
+        } else {
+            self.optional_header32_mut().DllCharacteristics = value
+        }
+    }
+    #[inline(always)]
+    pub fn set_size_of_stack_reserve(&mut self, value: u64) {
+        if self.is_64bit() {
+            self.optional_header64_mut().SizeOfStackReserve = value
+        } else {
+            self.optional_header32_mut().SizeOfStackReserve = value as u32
+        }
+    }
+    #[inline(always)]
+    pub fn set_size_of_stack_commit(&mut self, value: u64) {
+        if self.is_64bit() {
+            self.optional_header64_mut().SizeOfStackCommit = value
+        } else {
+            self.optional_header32_mut().SizeOfStackCommit = value as u32
+        }
+    }
+    #[inline(always)]
+    pub fn set_size_of_heap_reserve(&mut self, value: u64) {
+        if self.is_64bit() {
+            self.optional_header64_mut().SizeOfHeapReserve = value
+        } else {
+            self.optional_header32_mut().SizeOfHeapReserve = value as u32
+        }
+    }
+    #[inline(always)]
+    pub fn set_size_of_heap_commit(&mut self, value: u64) {
+        if self.is_64bit() {
+            self.optional_header64_mut().SizeOfHeapCommit = value
+        } else {
+            self.optional_header32_mut().SizeOfHeapCommit = value as u32
+        }
+    }
+    #[inline(always)]
+    pub fn set_loader_flags(&mut self, value: u32) {
+        if self.is_64bit() {
+            self.optional_header64_mut().LoaderFlags = value
+        } else {
+            self.optional_header32_mut().LoaderFlags = value
+        }
+    }
+    #[inline(always)]
+    pub fn set_number_of_rva_and_sizes(&mut self, value: u32) {
+        if self.is_64bit() {
+            self.optional_header64_mut().NumberOfRvaAndSizes = value
+        } else {
+            self.optional_header32_mut().NumberOfRvaAndSizes = value
+        }
+    }
+    #[inline(always)]
+    pub fn data_directory_mut(&mut self) -> &'_ mut [IMAGE_DATA_DIRECTORY] {
+        if self.is_64bit() {
+            &mut self.optional_header64_mut().DataDirectory
+        } else {
+            &mut self.optional_header32_mut().DataDirectory
         }
     }
 }

@@ -36,6 +36,8 @@ fn pe_from_file_32() {
     let path = path.as_str();
     let file = fs::read(format!("{path}\\..\\SysWOW64\\notepad.exe")).unwrap();
     let pe = PE::from_slice(file.as_slice()).unwrap();
+    let nt_header = pe.nt_headers();
+    pe.nt_headers().optional_header_mut().set_address_of_entry_point(100);
     assert_eq!(
         pe.nt_headers().file_header().Machine,
         IMAGE_FILE_MACHINE_I386

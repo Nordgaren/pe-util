@@ -38,7 +38,7 @@ mod util;
 /// # use pe_util::PE;
 /// fn example(slice: &[u8]) {
 ///     let pe = PE::from_slice(slice).expect("Could not validate that slice is a valid PE file.");
-///     let exports = pe.get_exports();
+///     let exports = pe.get_exports().unwrap_or_default();
 ///
 ///     for export in exports {
 ///         let ord = pe.get_function_ordinal(export.as_bytes());
@@ -64,20 +64,6 @@ impl<S> PE<'_, S> {
     pub fn base_address(self) -> usize {
         self.pointer.get_address()
     }
-    /// Returns the `IMAGE_NT_HEADERS` address of the PE.
-    ///
-    /// returns: usize
-    fn nt_headers_address(self) -> usize {
-        let dos_header = self.pointer.get_pointer::<IMAGE_DOS_HEADER>();
-        unsafe { self.base_address() + (*dos_header).e_lfanew as usize }
-    }
-    /// Returns the `IMAGE_OPTIONAL_HEADER` address of the PE.
-    ///
-    /// returns: usize
-    fn optional_header_address(self) -> usize {
-        let nt_headers = self.nt_headers_address() as *const IMAGE_NT_HEADERS32;
-        unsafe { addr_of!((*nt_headers).OptionalHeader) as usize }
-    }
     /// Returns true if the architecture for the PE is 64-bit, or false for any other architecture.
     ///
     /// returns: bool
@@ -96,8 +82,21 @@ impl<S> PE<'_, S> {
     pub fn is_mapped(self) -> bool {
         self.pointer.get_bool_one()
     }
+    /// Returns the `IMAGE_NT_HEADERS` address of the PE.
+    ///
+    /// returns: usize
+    fn nt_headers_address(self) -> usize {
+        let dos_header = self.pointer.get_pointer::<IMAGE_DOS_HEADER>();
+        unsafe { self.base_address() + (*dos_header).e_lfanew as usize }
+    }
+    /// Returns the `IMAGE_OPTIONAL_HEADER` address of the PE.
+    ///
+    /// returns: usize
+    fn optional_header_address(self) -> usize {
+        let nt_headers = self.nt_headers_address() as *const IMAGE_NT_HEADERS32;
+        unsafe { addr_of!((*nt_headers).OptionalHeader) as usize }
+    }
 }
-
 /// Returns a reference to the requested `RESOURCE_DATA_ENTRY` using the category and resource IDs provided. Assumes that
 /// the first language in the lang table is the right entry to use.
 ///
@@ -113,6 +112,23 @@ fn get_resource_data_entry<'a>(
     category_id: u32,
     resource_id: u32,
 ) -> Option<&'a RESOURCE_DATA_ENTRY> {
+        get_resource_data_entry(resource_directory_table, category_id, resource_id)
+}
+/// Returns a mutable reference to the requested `RESOURCE_DATA_ENTRY` using the category and resource IDs provided. Assumes
+/// that the first language in the lang table is the right entry to use.
+///
+/// # Arguments
+///
+/// * `resource_directory_table`: `&RESOURCE_DIRECTORY_TABLE`
+/// * `category_id`: `u32`
+/// * `resource_id`: `u32`
+///
+/// returns: `Option<&mut RESOURCE_DATA_ENTRY>`
+fn get_resource_data_entry_mut<'a>(
+    resource_directory_table: &RESOURCE_DIRECTORY_TABLE,
+    category_id: u32,
+    resource_id: u32,
+) -> Option<&'a mut RESOURCE_DATA_ENTRY> {
     unsafe {
         let resource_directory_table_addr = addr_of!(*resource_directory_table) as usize;
 
@@ -150,7 +166,7 @@ unsafe fn get_entry_offset_by_id(
     let resource_entries_address = addr_of!(*resource_directory_table) as usize
         + size_of::<RESOURCE_DIRECTORY_TABLE>()
         + (size_of::<IMAGE_RESOURCE_DIRECTORY_ENTRY>()
-            * resource_directory_table.NumberOfNameEntries as usize);
+        * resource_directory_table.NumberOfNameEntries as usize);
     let resource_directory_entries = slice::from_raw_parts(
         resource_entries_address as *const IMAGE_RESOURCE_DIRECTORY_ENTRY,
         resource_directory_table.NumberOfIDEntries as usize,
