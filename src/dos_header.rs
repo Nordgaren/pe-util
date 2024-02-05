@@ -132,7 +132,11 @@ impl PE<'_, DosHeader> {
         if !pe.validate() {
             return Err(Error::new(
                 ErrorKind::InvalidData,
-                format!("Magic bytes or signature did not match expected value: Dos Magic: {} Nt Signature: {}", pe.dos_header().e_magic, pe.nt_headers().signature()),
+                format!(
+                    "Magic bytes or signature did not match expected value: Dos Magic: {} Nt Signature: {}",
+                    pe.dos_header().e_magic,
+                    pe.nt_headers().signature(),
+                ),
             ));
         }
 
@@ -270,7 +274,6 @@ impl PE<'_, DosHeader> {
     #[inline(always)]
     pub fn dos_header(&self) -> &'_ IMAGE_DOS_HEADER {
         unsafe { &*self.pointer.get_pointer() }
-
     }
     /// Returns a reference to the start of the PE file as an `IMAGE_DOS_HEADER`.
     ///

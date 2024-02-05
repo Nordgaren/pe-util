@@ -1,5 +1,5 @@
 use crate::definitions::{IMAGE_FILE_HEADER, IMAGE_NT_HEADERS32, IMAGE_NT_HEADERS64};
-use crate::optional_header::{Const, ImageOptionalHeader, Mut};
+use crate::optional_header::OptionalHeader;
 use crate::PE;
 use std::marker::PhantomData;
 use std::mem;
@@ -25,15 +25,18 @@ impl PE<'_, NtHeaders> {
     pub fn file_header(&self) -> &'_ IMAGE_FILE_HEADER {
         &self.nt_headers32().FileHeader
     }
+    pub fn file_header_mut(&mut self) -> &'_ mut IMAGE_FILE_HEADER {
+        &mut self.nt_headers32_mut().FileHeader
+    }
     #[inline(always)]
-    pub fn optional_header(&self) -> PE<ImageOptionalHeader> {
+    pub fn optional_header(&self) -> PE<OptionalHeader> {
         PE {
             pointer: self.pointer,
             _marker: PhantomData,
         }
     }
     #[inline(always)]
-    pub fn optional_header_mut(&mut self) -> PE<ImageOptionalHeader> {
+    pub fn optional_header_mut(&mut self) -> PE<OptionalHeader> {
         PE {
             pointer: self.pointer,
             _marker: PhantomData,

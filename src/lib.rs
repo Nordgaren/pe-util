@@ -112,7 +112,7 @@ fn get_resource_data_entry<'a>(
     category_id: u32,
     resource_id: u32,
 ) -> Option<&'a RESOURCE_DATA_ENTRY> {
-        get_resource_data_entry(resource_directory_table, category_id, resource_id)
+    unsafe { mem::transmute(get_resource_data_entry_mut(resource_directory_table, category_id, resource_id)) }
 }
 /// Returns a mutable reference to the requested `RESOURCE_DATA_ENTRY` using the category and resource IDs provided. Assumes
 /// that the first language in the lang table is the right entry to use.
@@ -157,16 +157,15 @@ fn get_resource_data_entry_mut<'a>(
         ))
     }
 }
-
 unsafe fn get_entry_offset_by_id(
     resource_directory_table: &RESOURCE_DIRECTORY_TABLE,
     category_id: u32,
-) -> Option<u32> {
-    // We have to skip the Name entries, here, to iterate over the entires by Id.
+) -> Option<u32> {;
+    // We have to skip the Name entries, here, to iterate over the entries by Id.
     let resource_entries_address = addr_of!(*resource_directory_table) as usize
         + size_of::<RESOURCE_DIRECTORY_TABLE>()
         + (size_of::<IMAGE_RESOURCE_DIRECTORY_ENTRY>()
-        * resource_directory_table.NumberOfNameEntries as usize);
+            * resource_directory_table.NumberOfNameEntries as usize);
     let resource_directory_entries = slice::from_raw_parts(
         resource_entries_address as *const IMAGE_RESOURCE_DIRECTORY_ENTRY,
         resource_directory_table.NumberOfIDEntries as usize,

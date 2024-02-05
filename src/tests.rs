@@ -6,7 +6,7 @@ use crate::consts::{IMAGE_FILE_MACHINE_AMD64, IMAGE_FILE_MACHINE_FLAG, IMAGE_FIL
 use crate::dos_header::DosHeader;
 use crate::dos_header::FunctionId::*;
 use crate::nt_headers::NtHeaders;
-use crate::optional_header::ImageOptionalHeader;
+use crate::optional_header::OptionalHeader;
 use crate::resource::icon::{GRPICONDIR, GRPICONDIRENTRY};
 use crate::PE;
 use std::fs;
@@ -36,8 +36,6 @@ fn pe_from_file_32() {
     let path = path.as_str();
     let file = fs::read(format!("{path}\\..\\SysWOW64\\notepad.exe")).unwrap();
     let pe = PE::from_slice(file.as_slice()).unwrap();
-    let nt_header = pe.nt_headers();
-    pe.nt_headers().optional_header_mut().set_address_of_entry_point(100);
     assert_eq!(
         pe.nt_headers().file_header().Machine,
         IMAGE_FILE_MACHINE_I386
@@ -114,9 +112,7 @@ fn unmapped_pe_resource() {
             .expect("Could not find RT_GROUP_ICON");
         let group_header = group_resource.as_ptr() as *const GRPICONDIR;
         let count = (*group_header).idCount as usize;
-        let resources_ptr = &(*group_header).idEntries;
-        let icon_dir_entries =
-            std::slice::from_raw_parts(resources_ptr as *const GRPICONDIRENTRY, count);
+        let icon_dir_entries =(*group_header).get_entries();
         let mut icon_id = u32::MAX;
         for entry in icon_dir_entries {
             if entry.bWidth == 0 && entry.bHeight == 0 {
@@ -189,7 +185,7 @@ fn get_exports() {
 fn size() {
     assert_eq!(size_of::<PE<DosHeader>>(), size_of::<usize>());
     assert_eq!(size_of::<PE<NtHeaders>>(), size_of::<usize>());
-    assert_eq!(size_of::<PE<ImageOptionalHeader>>(), size_of::<usize>());
+    assert_eq!(size_of::<PE<OptionalHeader>>(), size_of::<usize>());
 }
 
 // This test should not compile.
@@ -216,7 +212,7 @@ fn size() {
 // }
 
 #[test]
-// I currently don't know how to associate a lifetime with a usize or a pointer, so `PE::from_address()` and `PE::from_ptr()`
+// I currently don't know how to associate a lifetime with a usize or a raw pointer, so `PE::from_address()` and `PE::from_ptr()`
 // will allow the user to create a PE that doesn't have any lifetime issues.
 fn pe_from_address_no_lifetime_issues() {
     unsafe {
