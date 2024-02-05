@@ -5,7 +5,7 @@ state. Currently only supports 32-bit and 64-bit PEs on x86 architectures, but, 
 in the future.
 
 ## Usage
-Construct the type with a slice, *const u8 or usize with the value of the memory address where the PE file lies in 
+Construct the type with a `&[u8]`, `*const u8` or `usize` with the value of the memory address where the PE file lies in 
 memory. You can get data about the PE regardless of its state as a mapped PE, ready to be executed, or as a file on disk.
 Pe-util is also neutral to whether or not the file is a 32-bit or 64-bit executable.
 

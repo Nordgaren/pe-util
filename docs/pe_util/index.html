@@ -4,7 +4,7 @@ A pointer sized type that allows the user to read a buffer in memory as a Window
 state. Currently only supports 32-bit and 64-bit PEs on x86 architectures, but, I plan on supporting more architectures 
 in the future.</p>
 <h3 id="usage"><a href="#usage">Usage</a></h3>
-<p>Construct the type with a slice, *const u8 or usize with the value of the memory address where the PE file lies in 
+<p>Construct the type with a <code>&amp;[u8]</code>, <code>*const u8</code> or <code>usize</code> with the value of the memory address where the PE file lies in 
 memory. You can get data about the PE regardless of its state as a mapped PE, ready to be executed, or as a file on disk.
 Pe-util is also neutral to whether or not the file is a 32-bit or 64-bit executable.</p>
 <h3 id="example"><a href="#example">Example</a></h3>
