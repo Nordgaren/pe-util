@@ -13,7 +13,7 @@ Pe-util is also neutral to whether or not the file is a 32-bit or 64-bit executa
 ```rust
 use pe_util::PE;
 fn example(slice: &[u8]) {
-    let pe = PE::from_slice(slice).expect("Could not validate that slice is a valid PE file.");
+    let pe = PE::from_slice(slice).expect("Could not validate that slice is a PE file.");
     let exports = pe.get_exports().unwrap_or_default();
 
     for export in exports {
