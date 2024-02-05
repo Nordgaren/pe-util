@@ -25,9 +25,6 @@ impl PE<'_, NtHeaders> {
     pub fn file_header(&self) -> &'_ IMAGE_FILE_HEADER {
         &self.nt_headers32().FileHeader
     }
-    pub fn file_header_mut(&mut self) -> &'_ mut IMAGE_FILE_HEADER {
-        &mut self.nt_headers32_mut().FileHeader
-    }
     #[inline(always)]
     pub fn optional_header(&self) -> PE<OptionalHeader> {
         PE {
