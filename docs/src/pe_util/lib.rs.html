@@ -203,7 +203,6 @@
 <a href="#203" id="203">203</a>
 <a href="#204" id="204">204</a>
 <a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(unused)]
 #![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../README.md&quot;</span>)]
 
@@ -318,7 +317,7 @@
     category_id: u32,
     resource_id: u32,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>RESOURCE_DATA_ENTRY&gt; {
-        get_resource_data_entry(resource_directory_table, category_id, resource_id)
+    <span class="kw">unsafe </span>{ mem::transmute(get_resource_data_entry_mut(resource_directory_table, category_id, resource_id)) }
 }
 <span class="doccomment">/// Returns a mutable reference to the requested `RESOURCE_DATA_ENTRY` using the category and resource IDs provided. Assumes
 /// that the first language in the lang table is the right entry to use.
@@ -363,16 +362,15 @@
         ))
     }
 }
-
 <span class="kw">unsafe fn </span>get_entry_offset_by_id(
     resource_directory_table: <span class="kw-2">&amp;</span>RESOURCE_DIRECTORY_TABLE,
     category_id: u32,
-) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
-    <span class="comment">// We have to skip the Name entries, here, to iterate over the entires by Id.
+) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {;
+    <span class="comment">// We have to skip the Name entries, here, to iterate over the entries by Id.
     </span><span class="kw">let </span>resource_entries_address = <span class="macro">addr_of!</span>(<span class="kw-2">*</span>resource_directory_table) <span class="kw">as </span>usize
         + size_of::&lt;RESOURCE_DIRECTORY_TABLE&gt;()
         + (size_of::&lt;IMAGE_RESOURCE_DIRECTORY_ENTRY&gt;()
-        * resource_directory_table.NumberOfNameEntries <span class="kw">as </span>usize);
+            * resource_directory_table.NumberOfNameEntries <span class="kw">as </span>usize);
     <span class="kw">let </span>resource_directory_entries = slice::from_raw_parts(
         resource_entries_address <span class="kw">as </span><span class="kw-2">*const </span>IMAGE_RESOURCE_DIRECTORY_ENTRY,
         resource_directory_table.NumberOfIDEntries <span class="kw">as </span>usize,

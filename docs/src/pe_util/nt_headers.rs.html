@@ -67,8 +67,11 @@
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::definitions::{IMAGE_FILE_HEADER, IMAGE_NT_HEADERS32, IMAGE_NT_HEADERS64};
-<span class="kw">use </span><span class="kw">crate</span>::optional_header::{Const, ImageOptionalHeader, Mut};
+<span class="kw">use </span><span class="kw">crate</span>::optional_header::OptionalHeader;
 <span class="kw">use </span><span class="kw">crate</span>::PE;
 <span class="kw">use </span>std::marker::PhantomData;
 <span class="kw">use </span>std::mem;
@@ -94,15 +97,18 @@
     </span><span class="kw">pub fn </span>file_header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>IMAGE_FILE_HEADER {
         <span class="kw-2">&amp;</span><span class="self">self</span>.nt_headers32().FileHeader
     }
+    <span class="kw">pub fn </span>file_header_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span><span class="kw-2">mut </span>IMAGE_FILE_HEADER {
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.nt_headers32_mut().FileHeader
+    }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>optional_header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PE&lt;ImageOptionalHeader&lt;Const&gt;&gt; {
+    </span><span class="kw">pub fn </span>optional_header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PE&lt;OptionalHeader&gt; {
         PE {
             pointer: <span class="self">self</span>.pointer,
             _marker: PhantomData,
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>optional_header_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; PE&lt;ImageOptionalHeader&lt;Mut&gt;&gt; {
+    </span><span class="kw">pub fn </span>optional_header_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; PE&lt;OptionalHeader&gt; {
         PE {
             pointer: <span class="self">self</span>.pointer,
             _marker: PhantomData,
@@ -135,4 +141,5 @@
     </span><span class="kw">pub fn </span>file_header_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span><span class="kw-2">mut </span>IMAGE_FILE_HEADER {
         <span class="kw-2">&amp;mut </span><span class="self">self</span>.nt_headers32_mut().FileHeader
     }
-}</code></pre></div></section></main></body></html>
+}
+</code></pre></div></section></main></body></html>

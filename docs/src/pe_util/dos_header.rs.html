@@ -672,6 +672,9 @@
 <a href="#672" id="672">672</a>
 <a href="#673" id="673">673</a>
 <a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::consts::{
     IMAGE_DIRECTORY_ENTRY_EXPORT, IMAGE_DIRECTORY_ENTRY_IMPORT, IMAGE_DIRECTORY_ENTRY_RESOURCE,
     IMAGE_DOS_SIGNATURE, IMAGE_NT_SIGNATURE, MAX_SECTION_HEADER_LEN,
@@ -806,7 +809,11 @@
         <span class="kw">if </span>!pe.validate() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::new(
                 ErrorKind::InvalidData,
-                <span class="macro">format!</span>(<span class="string">&quot;Magic bytes or signature did not match expected value: Dos Magic: {} Nt Signature: {}&quot;</span>, pe.dos_header().e_magic, pe.nt_headers().signature()),
+                <span class="macro">format!</span>(
+                    <span class="string">&quot;Magic bytes or signature did not match expected value: Dos Magic: {} Nt Signature: {}&quot;</span>,
+                    pe.dos_header().e_magic,
+                    pe.nt_headers().signature(),
+                ),
             ));
         }
 
@@ -944,7 +951,6 @@
     </span><span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>dos_header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>IMAGE_DOS_HEADER {
         <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span><span class="self">self</span>.pointer.get_pointer() }
-
     }
     <span class="doccomment">/// Returns a reference to the start of the PE file as an `IMAGE_DOS_HEADER`.
     ///
