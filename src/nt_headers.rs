@@ -26,14 +26,14 @@ impl PE<'_, NtHeaders> {
         &self.nt_headers32().FileHeader
     }
     #[inline(always)]
-    pub fn optional_header(&self) -> PE<ImageOptionalHeader<Const>> {
+    pub fn optional_header(&self) -> PE<ImageOptionalHeader> {
         PE {
             pointer: self.pointer,
             _marker: PhantomData,
         }
     }
     #[inline(always)]
-    pub fn optional_header_mut(&mut self) -> PE<ImageOptionalHeader<Mut>> {
+    pub fn optional_header_mut(&mut self) -> PE<ImageOptionalHeader> {
         PE {
             pointer: self.pointer,
             _marker: PhantomData,

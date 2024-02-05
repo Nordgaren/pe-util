@@ -5,16 +5,9 @@ use std::mem::size_of;
 
 /// ZST that represents the IMAGE_OPTIONAL_HEADER portion of the PE file
 #[derive(Copy, Clone)]
-pub struct ImageOptionalHeader<T>;
+pub struct ImageOptionalHeader;
 
-#[derive(Copy, Clone)]
-pub struct Mut;
-#[derive(Copy, Clone)]
-pub struct Const;
-
-
-
-impl<T> PE<'_, ImageOptionalHeader<T>> {
+impl PE<'_, ImageOptionalHeader> {
     #[inline(always)]
     fn optional_header32(&self) -> &'_ IMAGE_OPTIONAL_HEADER32 {
         unsafe { mem::transmute(self.optional_header_address()) }
@@ -241,7 +234,7 @@ impl<T> PE<'_, ImageOptionalHeader<T>> {
     }
 }
 
-impl PE<'_, ImageOptionalHeader<Mut>> {
+impl PE<'_, ImageOptionalHeader> {
     #[inline(always)]
     fn optional_header32_mut(&mut self) -> &'_ mut IMAGE_OPTIONAL_HEADER32 {
         unsafe { mem::transmute(self.optional_header_address()) }
