@@ -269,7 +269,15 @@ impl PE<'_, DosHeader> {
     /// returns: `&'_ IMAGE_DOS_HEADER`
     #[inline(always)]
     pub fn dos_header(&self) -> &'_ IMAGE_DOS_HEADER {
-        unsafe { mem::transmute(self.pointer) }
+        unsafe { &*self.pointer.get_pointer() }
+
+    }
+    /// Returns a reference to the start of the PE file as an `IMAGE_DOS_HEADER`.
+    ///
+    /// returns: `&'_ IMAGE_DOS_HEADER`
+    #[inline(always)]
+    pub fn dos_header_mut(&mut self) -> &'_ mut IMAGE_DOS_HEADER {
+        unsafe { &mut *self.pointer.get_mut_pointer() }
     }
     /// Returns the NtHeaders variant of the PE structure.
     ///
