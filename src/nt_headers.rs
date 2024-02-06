@@ -1,12 +1,18 @@
 use crate::definitions::{IMAGE_FILE_HEADER, IMAGE_NT_HEADERS32, IMAGE_NT_HEADERS64};
 use crate::optional_header::OptionalHeader;
-use crate::PE;
+use crate::{PE, PeState, PeType};
 use std::marker::PhantomData;
 use std::mem;
 use std::mem::size_of;
+use crate::dos_header::DosHeader;
+
 /// ZST that represents the IMAGE_NT_HEADERS portion of the PE file
-#[derive(Copy, Clone)]
+//#[derive(Copy, Clone)]
 pub struct NtHeaders;
+
+impl PeState for NtHeaders {}
+impl PeType for NtHeaders {}
+
 
 impl PE<'_, NtHeaders> {
     #[inline(always)]
@@ -40,7 +46,7 @@ impl PE<'_, NtHeaders> {
         }
     }
     #[inline(always)]
-    pub fn size_of(self) -> usize {
+    pub fn size_of(&self) -> usize {
         if self.is_64bit() {
             size_of::<IMAGE_NT_HEADERS64>()
         } else {

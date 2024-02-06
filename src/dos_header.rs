@@ -9,7 +9,7 @@ use crate::definitions::{
 use crate::dos_header::FunctionId::{Name, Ordinal};
 use crate::nt_headers::NtHeaders;
 use crate::util::{case_insensitive_compare_strs_as_bytes, strlen};
-use crate::{get_resource_data_entry, PE};
+use crate::{get_resource_data_entry, PE, PeState, PeType};
 use encoded_pointer::encoded::EncodedPointer;
 use std::io::{Error, ErrorKind};
 use std::marker::PhantomData;
@@ -19,8 +19,11 @@ use std::{cmp, mem};
 
 /// ZST that represents the IMAGE_DOS_HEADER portion of the PE file, as well as most of the base
 /// functionality that shouldn't be shared with the other typestates.
-#[derive(Copy, Clone)]
+//#[derive(Copy, Clone)]
 pub struct DosHeader;
+
+impl PeState for DosHeader {}
+impl PeType for DosHeader {}
 
 /// An enum that represents the various types of ways a function can be Imported or Exported in a PE
 /// file.
@@ -190,12 +193,12 @@ impl PE<'_, DosHeader> {
     /// Checks that the memory pointed to by `self.pointer` is a valid PE file.
     ///
     /// returns: `bool`
-    pub fn validate(self) -> bool {
+    pub fn validate(&self) -> bool {
         self.dos_header().e_magic == IMAGE_DOS_SIGNATURE
             && self.nt_headers().signature() == IMAGE_NT_SIGNATURE
     }
 
-    unsafe fn check_mapped(self) -> Option<bool> {
+    unsafe fn check_mapped(&self) -> Option<bool> {
         // Check as if the file is an image on disk. We should be able to read the entire import table (or export table, if the import table is empty),
         // as ascii strings, if it's a file on disk.
         let nt_headers = self.nt_headers();
@@ -230,7 +233,7 @@ impl PE<'_, DosHeader> {
 
         Some(false)
     }
-    unsafe fn check_mapped_export_dir(self, data_dir: &[IMAGE_DATA_DIRECTORY]) -> Option<bool> {
+    unsafe fn check_mapped_export_dir(&self, data_dir: &[IMAGE_DATA_DIRECTORY]) -> Option<bool> {
         let export_data_dir = &data_dir[IMAGE_DIRECTORY_ENTRY_EXPORT as usize];
         if export_data_dir.Size == 0 {
             return self.check_mapped_by_section();
@@ -259,7 +262,7 @@ impl PE<'_, DosHeader> {
 
         Some(false)
     }
-    fn check_mapped_by_section(self) -> Option<bool> {
+    fn check_mapped_by_section(&self) -> Option<bool> {
         let section_headers = self.section_headers();
         let first_section_header = &section_headers[0];
         let first_section_address =
@@ -286,7 +289,7 @@ impl PE<'_, DosHeader> {
     ///
     /// returns: `PE<NtHeaders>`
     #[inline(always)]
-    pub fn nt_headers(&self) -> PE<NtHeaders> {
+    pub fn nt_headers<'a>(&self) -> PE<'a, NtHeaders> {
         PE {
             pointer: self.pointer,
             _marker: PhantomData,
@@ -336,7 +339,7 @@ impl PE<'_, DosHeader> {
     /// * `rva`: `u32`
     ///
     /// returns: `Option<u32>`
-    pub fn rva_to_foa(self, rva: u32) -> Option<u32> {
+    pub fn rva_to_foa(&self, rva: u32) -> Option<u32> {
         let section_headers = self.section_headers();
 
         if rva < section_headers[0].PointerToRawData {
@@ -371,7 +374,7 @@ impl PE<'_, DosHeader> {
     /// * `export`: `FunctionId`
     ///
     /// returns: `Option<u32>`
-    pub fn get_export_rva(self, export: FunctionId) -> Option<u32> {
+    pub fn get_export_rva(&self, export: FunctionId) -> Option<u32> {
         let nt_headers = self.nt_headers();
         let optional_header = nt_headers.optional_header();
         let data_dir = optional_header.data_directory();
@@ -529,7 +532,7 @@ impl PE<'_, DosHeader> {
     /// * `ordinal`: `u16`
     ///
     /// returns: `Option<String>`
-    pub fn get_export_name(self, ordinal: u16) -> Option<String> {
+    pub fn get_export_name(&self, ordinal: u16) -> Option<String> {
         let nt_headers = self.nt_headers();
         let optional_header = nt_headers.optional_header();
         let data_dir = optional_header.data_directory();
@@ -594,7 +597,7 @@ impl PE<'_, DosHeader> {
     /// * `function_name`: `&[u8]`
     ///
     /// returns: `u16`
-    pub fn get_function_ordinal(self, function_name: &[u8]) -> u16 {
+    pub fn get_function_ordinal(&self, function_name: &[u8]) -> u16 {
         unsafe {
             let base_addr = self.base_address();
             let nt_headers = self.nt_headers();

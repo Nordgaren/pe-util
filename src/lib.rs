@@ -50,25 +50,29 @@ mod util;
 ///     println!("{}", res.len());
 /// }
 /// ```
-#[derive(Copy, Clone)]
-pub struct PE<'a, S> {
+//#[derive(Copy, Clone)]
+pub struct PE<'a, S: PeState> {
     pointer: EncodedPointer,
     _marker: PhantomData<&'a S>,
 }
+/// Marker trait that limits the types that can be used in the `PE` state.
+pub(crate) trait PeState {}
 
-impl<S> PE<'_, S> {
+pub(crate) trait PeType {}
+
+impl<S: PeState> PE<'_, S> {
     /// Returns the base address of the PE .
     ///
     /// returns: usize
     #[inline(always)]
-    pub fn base_address(self) -> usize {
+    pub fn base_address(&self) -> usize {
         self.pointer.get_address()
     }
     /// Returns true if the architecture for the PE is 64-bit, or false for any other architecture.
     ///
     /// returns: bool
     #[inline(always)]
-    pub fn is_64bit(self) -> bool {
+    pub fn is_64bit(&self) -> bool {
         let nt_headers = self.nt_headers_address() as *const IMAGE_NT_HEADERS32;
         matches!(
             unsafe { (*nt_headers).FileHeader.Machine },
@@ -79,20 +83,20 @@ impl<S> PE<'_, S> {
     ///
     /// returns: bool
     #[inline(always)]
-    pub fn is_mapped(self) -> bool {
+    pub fn is_mapped(&self) -> bool {
         self.pointer.get_bool_one()
     }
     /// Returns the `IMAGE_NT_HEADERS` address of the PE.
     ///
     /// returns: usize
-    fn nt_headers_address(self) -> usize {
+    fn nt_headers_address(&self) -> usize {
         let dos_header = self.pointer.get_pointer::<IMAGE_DOS_HEADER>();
         unsafe { self.base_address() + (*dos_header).e_lfanew as usize }
     }
     /// Returns the `IMAGE_OPTIONAL_HEADER` address of the PE.
     ///
     /// returns: usize
-    fn optional_header_address(self) -> usize {
+    fn optional_header_address(&self) -> usize {
         let nt_headers = self.nt_headers_address() as *const IMAGE_NT_HEADERS32;
         unsafe { addr_of!((*nt_headers).OptionalHeader) as usize }
     }

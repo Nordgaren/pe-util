@@ -1,11 +1,16 @@
 use crate::definitions::{IMAGE_DATA_DIRECTORY, IMAGE_OPTIONAL_HEADER32, IMAGE_OPTIONAL_HEADER64};
-use crate::PE;
+use crate::{PE, PeState, PeType};
 use std::mem;
 use std::mem::size_of;
+use crate::nt_headers::NtHeaders;
 
 /// ZST that represents the IMAGE_OPTIONAL_HEADER portion of the PE file
-#[derive(Copy, Clone)]
+//#[derive(Copy, Clone)]
 pub struct OptionalHeader;
+
+impl PeState for OptionalHeader {}
+impl PeType for OptionalHeader {}
+
 
 impl PE<'_, OptionalHeader> {
     #[inline(always)]
@@ -17,39 +22,39 @@ impl PE<'_, OptionalHeader> {
         unsafe { mem::transmute(self.optional_header_address()) }
     }
     #[inline(always)]
-    pub fn magic(self) -> u16 {
+    pub fn magic(&self) -> u16 {
         self.optional_header32().Magic
     }
     #[inline(always)]
-    pub fn major_linker_version(self) -> u8 {
+    pub fn major_linker_version(&self) -> u8 {
         self.optional_header32().MajorLinkerVersion
     }
     #[inline(always)]
-    pub fn minor_linker_version(self) -> u8 {
+    pub fn minor_linker_version(&self) -> u8 {
         self.optional_header32().MinorLinkerVersion
     }
     #[inline(always)]
-    pub fn size_of_code(self) -> u32 {
+    pub fn size_of_code(&self) -> u32 {
         self.optional_header32().SizeOfCode
     }
     #[inline(always)]
-    pub fn size_of_initialized_data(self) -> u32 {
+    pub fn size_of_initialized_data(&self) -> u32 {
         self.optional_header32().SizeOfInitializedData
     }
     #[inline(always)]
-    pub fn size_of_uninitialized_data(self) -> u32 {
+    pub fn size_of_uninitialized_data(&self) -> u32 {
         self.optional_header32().SizeOfUninitializedData
     }
     #[inline(always)]
-    pub fn address_of_entry_point(self) -> u32 {
+    pub fn address_of_entry_point(&self) -> u32 {
         self.optional_header32().AddressOfEntryPoint
     }
     #[inline(always)]
-    pub fn base_of_code(self) -> u32 {
+    pub fn base_of_code(&self) -> u32 {
         self.optional_header32().BaseOfCode
     }
     #[inline(always)]
-    pub fn image_base(self) -> u64 {
+    pub fn image_base(&self) -> u64 {
         if self.is_64bit() {
             self.optional_header64().ImageBase
         } else {
@@ -57,7 +62,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn section_alignment(self) -> u32 {
+    pub fn section_alignment(&self) -> u32 {
         if self.is_64bit() {
             self.optional_header64().SectionAlignment
         } else {
@@ -65,7 +70,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn file_alignment(self) -> u32 {
+    pub fn file_alignment(&self) -> u32 {
         if self.is_64bit() {
             self.optional_header64().FileAlignment
         } else {
@@ -73,7 +78,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn major_operating_system_version(self) -> u16 {
+    pub fn major_operating_system_version(&self) -> u16 {
         if self.is_64bit() {
             self.optional_header64().MajorOperatingSystemVersion
         } else {
@@ -81,7 +86,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn minor_operating_system_version(self) -> u16 {
+    pub fn minor_operating_system_version(&self) -> u16 {
         if self.is_64bit() {
             self.optional_header64().MinorOperatingSystemVersion
         } else {
@@ -89,7 +94,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn major_image_version(self) -> u16 {
+    pub fn major_image_version(&self) -> u16 {
         if self.is_64bit() {
             self.optional_header64().MajorImageVersion
         } else {
@@ -97,7 +102,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn minor_image_version(self) -> u16 {
+    pub fn minor_image_version(&self) -> u16 {
         if self.is_64bit() {
             self.optional_header64().MinorImageVersion
         } else {
@@ -105,7 +110,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn major_subsystem_version(self) -> u16 {
+    pub fn major_subsystem_version(&self) -> u16 {
         if self.is_64bit() {
             self.optional_header64().MajorSubsystemVersion
         } else {
@@ -113,7 +118,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn minor_subsystem_version(self) -> u16 {
+    pub fn minor_subsystem_version(&self) -> u16 {
         if self.is_64bit() {
             self.optional_header64().MinorSubsystemVersion
         } else {
@@ -121,7 +126,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn win32_version_value(self) -> u32 {
+    pub fn win32_version_value(&self) -> u32 {
         if self.is_64bit() {
             self.optional_header64().Win32VersionValue
         } else {
@@ -129,7 +134,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn size_of_image(self) -> u32 {
+    pub fn size_of_image(&self) -> u32 {
         if self.is_64bit() {
             self.optional_header64().SizeOfImage
         } else {
@@ -137,7 +142,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn size_of_headers(self) -> u32 {
+    pub fn size_of_headers(&self) -> u32 {
         if self.is_64bit() {
             self.optional_header64().SizeOfHeaders
         } else {
@@ -145,7 +150,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn check_sum(self) -> u32 {
+    pub fn check_sum(&self) -> u32 {
         if self.is_64bit() {
             self.optional_header64().CheckSum
         } else {
@@ -153,7 +158,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn subsystem(self) -> u16 {
+    pub fn subsystem(&self) -> u16 {
         if self.is_64bit() {
             self.optional_header64().Subsystem
         } else {
@@ -161,7 +166,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn dll_characteristics(self) -> u16 {
+    pub fn dll_characteristics(&self) -> u16 {
         if self.is_64bit() {
             self.optional_header64().DllCharacteristics
         } else {
@@ -169,7 +174,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn size_of_stack_reserve(self) -> u64 {
+    pub fn size_of_stack_reserve(&self) -> u64 {
         if self.is_64bit() {
             self.optional_header64().SizeOfStackReserve
         } else {
@@ -177,7 +182,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn size_of_stack_commit(self) -> u64 {
+    pub fn size_of_stack_commit(&self) -> u64 {
         if self.is_64bit() {
             self.optional_header64().SizeOfStackCommit
         } else {
@@ -185,7 +190,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn size_of_heap_reserve(self) -> u64 {
+    pub fn size_of_heap_reserve(&self) -> u64 {
         if self.is_64bit() {
             self.optional_header64().SizeOfHeapReserve
         } else {
@@ -193,7 +198,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn size_of_heap_commit(self) -> u64 {
+    pub fn size_of_heap_commit(&self) -> u64 {
         if self.is_64bit() {
             self.optional_header64().SizeOfHeapCommit
         } else {
@@ -201,7 +206,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn loader_flags(self) -> u32 {
+    pub fn loader_flags(&self) -> u32 {
         if self.is_64bit() {
             self.optional_header64().LoaderFlags
         } else {
@@ -209,7 +214,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn number_of_rva_and_sizes(self) -> u32 {
+    pub fn number_of_rva_and_sizes(&self) -> u32 {
         if self.is_64bit() {
             self.optional_header64().NumberOfRvaAndSizes
         } else {
@@ -225,7 +230,7 @@ impl PE<'_, OptionalHeader> {
         }
     }
     #[inline(always)]
-    pub fn size_of(self) -> usize {
+    pub fn size_of(&self) -> usize {
         if self.is_64bit() {
             size_of::<IMAGE_OPTIONAL_HEADER64>()
         } else {
