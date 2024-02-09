@@ -4,10 +4,10 @@ extern crate alloc;
 
 use crate::consts::{IMAGE_FILE_MACHINE_AMD64, IMAGE_FILE_MACHINE_FLAG, IMAGE_FILE_MACHINE_I386};
 use crate::dos_header::DosHeader;
-use crate::dos_header::FunctionId::*;
 use crate::nt_headers::NtHeaders;
 use crate::optional_header::OptionalHeader;
 use crate::resource::icon::{GRPICONDIR, GRPICONDIRENTRY};
+use crate::FunctionId::*;
 use crate::PE;
 use std::fs;
 use std::mem::size_of;
@@ -37,10 +37,6 @@ fn pe_from_file_32() {
     let file = fs::read(format!("{path}\\..\\SysWOW64\\notepad.exe")).unwrap();
 
     let pe = PE::from_slice(file.as_slice()).unwrap();
-    let nt_header = pe.nt_headers();
-    let optional_header = nt_header.optional_header();
-    nt_header.optional_header().set_address_of_entry_point(199);
-    pe.nt_headers().optional_header().set_address_of_entry_point(100);
 
     assert_eq!(
         pe.nt_headers().file_header().Machine,
@@ -115,16 +111,12 @@ fn unmapped_pe_resource() {
         let pe = PE::from_slice(&file[..]).unwrap();
         let nt_header = pe.nt_headers();
 
-        nt_header.optional_header().set_address_of_entry_point(199);
-        pe.nt_headers().optional_header().set_address_of_entry_point(100);
-
-
         let group_resource = pe
             .get_pe_resource(14, 2)
             .expect("Could not find RT_GROUP_ICON");
         let group_header = group_resource.as_ptr() as *const GRPICONDIR;
         let count = (*group_header).idCount as usize;
-        let icon_dir_entries =(*group_header).get_entries();
+        let icon_dir_entries = (*group_header).get_entries();
         let mut icon_id = u32::MAX;
         for entry in icon_dir_entries {
             if entry.bWidth == 0 && entry.bHeight == 0 {
@@ -145,7 +137,6 @@ fn get_rva_by_ordinal_on_disk() {
     unsafe {
         let kernel_32_addr = GetModuleHandleA("kernel32.dll\0".as_ptr());
         let pe = PE::from_address(kernel_32_addr).unwrap();
-
 
         let ordinal = pe.get_function_ordinal("LoadLibraryA".as_bytes());
 
@@ -196,9 +187,10 @@ fn get_exports() {
 
 #[test]
 fn size() {
-    assert_eq!(size_of::<PE<DosHeader>>(), size_of::<usize>());
-    assert_eq!(size_of::<PE<NtHeaders>>(), size_of::<usize>());
-    assert_eq!(size_of::<PE<OptionalHeader>>(), size_of::<usize>());
+    assert_eq!(size_of::<PE>(), size_of::<usize>());
+    assert_eq!(size_of::<DosHeader>(), size_of::<usize>());
+    assert_eq!(size_of::<NtHeaders>(), size_of::<usize>());
+    assert_eq!(size_of::<OptionalHeader>(), size_of::<usize>());
 }
 
 // This test should not compile.
