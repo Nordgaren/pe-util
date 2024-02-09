@@ -15,7 +15,7 @@ use std::io::{Error, ErrorKind};
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::str::Utf8Error;
-use std::{cmp, mem};
+use std::cmp;
 
 /// ZST that represents the IMAGE_DOS_HEADER portion of the PE file, as well as most of the base
 /// functionality that shouldn't be shared with the other typestates.
@@ -238,7 +238,7 @@ impl PE<'_, DosHeader> {
         if export_data_dir.Size == 0 {
             return self.check_mapped_by_section();
         }
-        let export_table_addr: &IMAGE_EXPORT_DIRECTORY = mem::transmute(
+        let export_table_addr: &IMAGE_EXPORT_DIRECTORY = std::mem::transmute(
             self.base_address() + self.rva_to_foa(export_data_dir.VirtualAddress)? as usize,
         );
 
@@ -388,7 +388,7 @@ impl PE<'_, DosHeader> {
         }
 
         let export_directory: &'static IMAGE_EXPORT_DIRECTORY =
-            unsafe { mem::transmute(self.base_address() + export_directory_offset as usize) };
+            unsafe { std::mem::transmute(self.base_address() + export_directory_offset as usize) };
 
         let mut export_address_table_rva = export_directory.AddressOfFunctions;
         if !is_mapped {
@@ -485,7 +485,7 @@ impl PE<'_, DosHeader> {
         }
 
         let export_directory: &'static IMAGE_EXPORT_DIRECTORY =
-            unsafe { mem::transmute(self.base_address() + export_directory_offset as usize) };
+            unsafe { std::mem::transmute(self.base_address() + export_directory_offset as usize) };
 
         let mut name_table_offset = export_directory.AddressOfNames;
         if !is_mapped {
@@ -550,7 +550,7 @@ impl PE<'_, DosHeader> {
         }
 
         let export_directory: &'static IMAGE_EXPORT_DIRECTORY =
-            unsafe { mem::transmute(self.base_address() + export_directory_offset as usize) };
+            unsafe { std::mem::transmute(self.base_address() + export_directory_offset as usize) };
 
         let mut name_table_offset = export_directory.AddressOfNames;
         if !is_mapped {
@@ -607,7 +607,7 @@ impl PE<'_, DosHeader> {
                 &optional_header.data_directory()[IMAGE_DIRECTORY_ENTRY_EXPORT as usize];
 
             let image_export_directory: &IMAGE_EXPORT_DIRECTORY =
-                mem::transmute(base_addr + export_dir.VirtualAddress as usize);
+                std::mem::transmute(base_addr + export_dir.VirtualAddress as usize);
 
             let name_dir = std::slice::from_raw_parts(
                 (base_addr + image_export_directory.AddressOfNames as usize) as *const u32,
@@ -660,7 +660,7 @@ impl PE<'_, DosHeader> {
         }
         unsafe {
             let resource_directory_table: &RESOURCE_DIRECTORY_TABLE =
-                mem::transmute(self.base_address() + resource_directory_table_offset as usize);
+                std::mem::transmute(self.base_address() + resource_directory_table_offset as usize);
 
             let resource_data_entry =
                 get_resource_data_entry(resource_directory_table, category_id, resource_id)?;

@@ -1,5 +1,9 @@
 # pe-util
-[GitHub](https://github.com/Nordgaren/pe-util)  
+[GitHub](https://github.com/Nordgaren/pe-util)
+
+> [!WARNING]
+> This project is in early development. Things will change. Sorry for any inconvenience.
+
 A pointer sized type that allows the user to read a buffer in memory as a Windows PE reguardless of architecture or mapped 
 state. Currently only supports 32-bit and 64-bit PEs on x86 architectures, but, I plan on supporting more architectures 
 in the future.
