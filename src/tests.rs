@@ -193,7 +193,7 @@ fn size() {
     assert_eq!(size_of::<OptionalHeader>(), size_of::<usize>());
 }
 
-// This test should not compile.
+// These tests should not compile.
 //       |
 //       |             let file = fs::read(format!("{path}\\notepad.exe")).unwrap();
 //       |                 ---- binding `file` declared here
@@ -215,10 +215,56 @@ fn size() {
 //         assert_eq!(pe.nt_headers().file_header().Machine, 0x8664)
 //     }
 // }
+//      |
+//      |             let file = fs::read(format!("{path}\\notepad.exe")).unwrap();
+//      |                 ---- binding `file` declared here
+//      |             let pe = PE::from_slice(file.as_slice()).expect("Could not parse slice as a PE.");
+//      |                                     ^^^^ borrowed value does not live long enough
+//      |             nt = pe.nt_headers();
+//      |         }
+//      |         - `file` dropped here while still borrowed
+//      |         assert_eq!(nt.file_header().Machine, 0x8664)
+//      |                    -- borrow later used here
+// #[test]
+// fn pe_from_file_lifetime_nt_headers_no_compile() {
+//     unsafe {
+//         let mut path = get_system_dir().expect("Could not get system dir.");
+//         let nt;
+//         {
+//             let file = fs::read(format!("{path}\\notepad.exe")).unwrap();
+//             let pe = PE::from_slice(file.as_slice()).expect("Could not parse slice as a PE.");
+//             nt = pe.nt_headers();
+//         }
+//         assert_eq!(nt.file_header().Machine, 0x8664)
+//     }
+// }
+//      |
+//      |             let file = fs::read(format!("{path}\\notepad.exe")).unwrap();
+//      |                 ---- binding `file` declared here
+//      |             let pe = PE::from_slice(file.as_slice()).expect("Could not parse slice as a PE.");
+//      |                                     ^^^^ borrowed value does not live long enough
+//      |             op = pe.nt_headers().optional_header();
+//      |         }
+//      |         - `file` dropped here while still borrowed
+//      |         assert_eq!(op.magic(), 0x0)
+//      |                    -- borrow later used here
+// #[test]
+// fn pe_from_file_lifetime_optional_header_no_compile() {
+//     unsafe {
+//         let mut path = get_system_dir().expect("Could not get system dir.");
+//         let op;
+//         {
+//             let file = fs::read(format!("{path}\\notepad.exe")).unwrap();
+//             let pe = PE::from_slice(file.as_slice()).expect("Could not parse slice as a PE.");
+//             op = pe.nt_headers().optional_header();
+//         }
+//         assert_eq!(op.magic(), 0x0)
+//     }
+// }
 
 #[test]
 // I currently don't know how to associate a lifetime with a usize or a raw pointer, so `PE::from_address()` and `PE::from_ptr()`
-// will allow the user to create a PE that doesn't have any lifetime issues.
+// will allow the user to create a PE that doesn't have any lifetime issues. Should not compile, but does.
 fn pe_from_address_no_lifetime_issues() {
     unsafe {
         let pe;
