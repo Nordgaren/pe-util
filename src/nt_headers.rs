@@ -7,6 +7,7 @@ use std::marker::PhantomData;
 use std::mem::size_of;
 
 /// Type that represents the `IMAGE_NT_HEADERS` portion of the PE file
+#[repr(C)]
 pub struct NtHeaders<'a> {
     pointer: PeEncodedPointer,
     _marker: PhantomData<&'a u8>,

@@ -19,7 +19,6 @@ use crate::FunctionId::{Name, Ordinal};
 use core::marker::PhantomData;
 use core::mem::size_of;
 use core::ptr::addr_of;
-use core::{cmp, slice};
 use encoded_pointer::encoded::EncodedPointer;
 use std::io::{Error, ErrorKind};
 use std::ops::{Deref, DerefMut};
@@ -56,6 +55,7 @@ mod util;
 ///     println!("{}", res.len());
 /// }
 /// ```
+#[repr(C)]
 pub struct PE<'a> {
     pointer: PeEncodedPointer,
     _marker: PhantomData<&'a u8>,
@@ -67,7 +67,7 @@ pub enum FunctionId<'a> {
     Name(&'a str),
     Ordinal(u16),
 }
-
+// Factory methods
 impl<'a> PE<'a> {
     /// Returns a `PE` from a slice that starts with a valid PE file. The returned `PE` shares the
     /// lifetime of the slice.
@@ -113,10 +113,10 @@ impl<'a> PE<'a> {
     /// # Safety
     ///
     /// This function does not check `EncodedPointer` compatability, mapped state, nor that the slice is
-    /// a valid PE file.
+    /// a valid PE file. The caller must specify the correct mapped state for `is_mapped`.
     #[inline(always)]
     pub unsafe fn from_slice_assume_mapped(slice: &'a [u8], is_mapped: bool) -> Self {
-        unsafe { Self::from_address_assume_mapped(slice.as_ptr() as usize, is_mapped) }
+        unsafe { Self::from_ptr_assume_mapped(slice.as_ptr(), is_mapped) }
     }
     /// Returns a `PE` from a `*const u8` that points to the start of a valid PE file. There is no
     /// associated lifetime for the returned `PE`.
@@ -129,7 +129,7 @@ impl<'a> PE<'a> {
     ///
     /// returns: `Result<PE<DosHeader>, Error>`
     #[inline(always)]
-    pub fn from_ptr(ptr: *const u8) -> std::io::Result<Self> {
+    pub unsafe fn from_ptr(ptr: *const u8) -> std::io::Result<Self> {
         Self::from_address(ptr as usize)
     }
     /// Returns a `PE` from a `*const u8` that points to the start of a valid PE file. There is no
@@ -149,6 +149,25 @@ impl<'a> PE<'a> {
     pub unsafe fn from_ptr_unchecked(ptr: *const u8) -> Self {
         Self::from_address_unchecked(ptr as usize)
     }
+    /// Returns a `PE` from a `*const u8` that points to the start of a valid PE file. There is no
+    /// associated lifetime for the returned `PE`. Assumes the mapped state of with the passed in
+    /// `is_mapped` parameter, and does not validate that the slice is a valid PE file.
+    ///
+    /// # Arguments
+    ///
+    /// * `slice`: `&'a [u8]`
+    /// * `is_mapped`: `bool`
+    ///
+    /// returns: `PE<DosHeader>`
+    ///
+    /// # Safety
+    ///
+    /// This function does not check `EncodedPointer` compatability, mapped state, nor that the slice is
+    /// a valid PE file. The caller must specify the correct mapped state for `is_mapped`.
+    #[inline(always)]
+    pub unsafe fn from_ptr_assume_mapped(slice: *const u8, is_mapped: bool) -> Self {
+        unsafe { Self::from_address_assume_mapped(slice as usize, is_mapped) }
+    }
     /// Returns a PE from a `usize` with the value of the address of a valid PE file. There is no
     /// associated lifetime for the returned `PE`.
     /// Returns an `Error` with `ErrorKind::InvalidData` if the pe cannot be validated by magic bytes
@@ -159,7 +178,7 @@ impl<'a> PE<'a> {
     /// * `base_address`: `usize`
     ///
     /// returns: `Result<PE<DosHeader>, Error>`
-    pub fn from_address(base_address: usize) -> std::io::Result<Self> {
+    fn from_address(base_address: usize) -> std::io::Result<Self> {
         let mut pe = PE {
             pointer: PeEncodedPointer::new(EncodedPointer::new(base_address, false, false)?),
             _marker: PhantomData,
@@ -194,7 +213,7 @@ impl<'a> PE<'a> {
     ///
     /// This function does not check `EncodedPointer` compatability, mapped state, nor that the address
     /// provided points to a valid PE file.
-    pub unsafe fn from_address_unchecked(base_address: usize) -> Self {
+    unsafe fn from_address_unchecked(base_address: usize) -> Self {
         PE {
             pointer: PeEncodedPointer::new(EncodedPointer::from_value_unchecked(base_address)),
             _marker: PhantomData,
@@ -214,21 +233,14 @@ impl<'a> PE<'a> {
     /// # Safety
     ///
     /// This function does not check `EncodedPointer` compatability, mapped state, nor that the pointer
-    /// points to a valid PE file.
-    pub unsafe fn from_address_assume_mapped(base_address: usize, is_mapped: bool) -> Self {
+    /// points to a valid PE file. The caller must specify the correct mapped state for `is_mapped`.
+    unsafe fn from_address_assume_mapped(base_address: usize, is_mapped: bool) -> Self {
         let value = EncodedPointer::encode(base_address, is_mapped, false);
 
         PE {
             pointer: PeEncodedPointer::new(EncodedPointer::from_value_unchecked(value)),
             _marker: PhantomData,
         }
-    }
-    /// Checks that the memory pointed to by `self.pointer` is a valid PE file.
-    ///
-    /// returns: `bool`
-    pub fn validate(&self) -> bool {
-        self.dos_headers().e_magic() == IMAGE_DOS_SIGNATURE
-            && self.nt_headers().signature() == IMAGE_NT_SIGNATURE
     }
 }
 
@@ -246,6 +258,14 @@ impl PE<'_> {
     #[inline(always)]
     pub fn is_mapped(&self) -> bool {
         self.pointer.is_mapped()
+    }
+    /// Checks that the memory pointed to by `self.pointer` is a valid PE file.
+    ///
+    /// returns: `bool`
+    #[inline(always)]
+    pub fn validate(&self) -> bool {
+        self.dos_headers().e_magic() == IMAGE_DOS_SIGNATURE
+            && self.nt_headers().signature() == IMAGE_NT_SIGNATURE
     }
     /// Returns the NtHeaders variant of the PE structure.
     ///
@@ -284,7 +304,7 @@ impl PE<'_> {
         unsafe {
             std::slice::from_raw_parts(
                 section_headers_base as *mut IMAGE_SECTION_HEADER,
-                cmp::min(
+                std::cmp::min(
                     self.nt_headers()
                         .optional_header()
                         .number_of_rva_and_sizes(),
@@ -302,7 +322,7 @@ impl PE<'_> {
         unsafe {
             std::slice::from_raw_parts_mut(
                 section_headers_base as *mut IMAGE_SECTION_HEADER,
-                cmp::min(
+                std::cmp::min(
                     self.nt_headers()
                         .optional_header()
                         .number_of_rva_and_sizes(),
@@ -815,7 +835,7 @@ unsafe fn get_entry_offset_by_id(
         + size_of::<RESOURCE_DIRECTORY_TABLE>()
         + (size_of::<IMAGE_RESOURCE_DIRECTORY_ENTRY>()
             * resource_directory_table.NumberOfNameEntries as usize);
-    let resource_directory_entries = slice::from_raw_parts(
+    let resource_directory_entries = std::slice::from_raw_parts(
         resource_entries_address as *const IMAGE_RESOURCE_DIRECTORY_ENTRY,
         resource_directory_table.NumberOfIDEntries as usize,
     );
@@ -835,7 +855,7 @@ unsafe fn get_entry_offset_by_name(
 ) -> Option<u32> {
     let resource_entries_address =
         addr_of!(*resource_directory_table) as usize + size_of::<RESOURCE_DIRECTORY_TABLE>();
-    let resource_directory_entries = slice::from_raw_parts(
+    let resource_directory_entries = std::slice::from_raw_parts(
         resource_entries_address as *const IMAGE_RESOURCE_DIRECTORY_ENTRY,
         resource_directory_table.NumberOfNameEntries as usize,
     );
@@ -844,7 +864,7 @@ unsafe fn get_entry_offset_by_name(
         let name_ptr =
             addr_of!(*resource_directory_table) as usize + resource_directory_entry.Id as usize;
         let resource_name =
-            slice::from_raw_parts(name_ptr as *const u8, strlen(name_ptr as *const u8));
+            std::slice::from_raw_parts(name_ptr as *const u8, strlen(name_ptr as *const u8));
         if resource_name == name {
             return Some(resource_directory_entry.OffsetToData);
         }

@@ -18,6 +18,7 @@ use std::mem::size_of;
 use std::str::Utf8Error;
 
 /// Type that represents the `IMAGE_DOS_HEADER` portion of the PE file.
+#[repr(C)]
 pub struct DosHeader<'a> {
     pointer: PeEncodedPointer,
     _marker: PhantomData<&'a u8>,

@@ -8,6 +8,7 @@ use std::mem;
 use std::mem::size_of;
 
 /// Type that represents the `IMAGE_OPTIONAL_HEADER` portion of the PE file
+#[repr(C)]
 pub struct OptionalHeader<'a> {
     pointer: PeEncodedPointer,
     _marker: PhantomData<&'a u8>,

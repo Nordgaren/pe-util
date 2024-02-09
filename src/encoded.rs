@@ -20,6 +20,7 @@ impl Deref for PeEncodedPointer {
 }
 
 impl PeEncodedPointer {
+    #[inline(always)]
     pub fn new(pointer: EncodedPointer) -> Self {
         Self(pointer)
     }
@@ -51,6 +52,7 @@ impl PeEncodedPointer {
     /// Returns the `IMAGE_NT_HEADERS` address of the PE.
     ///
     /// returns: usize
+    #[inline(always)]
     pub(crate) fn nt_headers_address(&self) -> usize {
         let dos_header = self.get_pointer::<IMAGE_DOS_HEADER>();
         unsafe { self.base_address() + (*dos_header).e_lfanew as usize }
@@ -58,6 +60,7 @@ impl PeEncodedPointer {
     /// Returns the `IMAGE_OPTIONAL_HEADER` address of the PE.
     ///
     /// returns: usize
+    #[inline(always)]
     pub(crate) fn optional_header_address(&self) -> usize {
         let nt_headers = self.nt_headers_address() as *const IMAGE_NT_HEADERS32;
         unsafe { addr_of!((*nt_headers).OptionalHeader) as usize }
