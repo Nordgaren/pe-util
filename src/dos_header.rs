@@ -4,7 +4,7 @@ use crate::consts::{
 };
 use crate::definitions::{
     IMAGE_DATA_DIRECTORY, IMAGE_DOS_HEADER, IMAGE_EXPORT_DIRECTORY, IMAGE_IMPORT_DESCRIPTOR,
-    IMAGE_NT_HEADERS32, IMAGE_SECTION_HEADER, RESOURCE_DIRECTORY_TABLE,
+    IMAGE_NT_HEADERS32, IMAGE_SECTION_HEADER, IMAGE_RESOURCE_DIRECTORY,
 };
 use crate::encoded::PeEncodedPointer;
 use crate::nt_headers::NtHeaders;
@@ -48,3 +48,15 @@ impl DosHeader<'_> {
         self.dos_header().e_lfanew
     }
 }
+
+impl DosHeader<'_> {
+    #[inline(always)]
+    pub fn set_e_magic(&mut self, value: u16) {
+        self.dos_header_mut().e_magic = value;
+    }
+    #[inline(always)]
+    pub fn set_e_lfanew(&mut self, value: i32) {
+        self.dos_header_mut().e_lfanew = value;
+    }
+}
+

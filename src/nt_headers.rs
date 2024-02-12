@@ -35,7 +35,7 @@ impl NtHeaders<'_> {
         unsafe { &*(self as *const NtHeaders as *const OptionalHeader) }
     }
     #[inline(always)]
-    pub fn optional_header_mut(&mut self) -> &mut OptionalHeader {
+    pub unsafe fn optional_header_mut(&mut self) -> &mut OptionalHeader {
         unsafe { &mut *(self as *mut NtHeaders as *mut OptionalHeader) }
     }
     #[inline(always)]
@@ -62,7 +62,7 @@ impl NtHeaders<'_> {
         self.nt_headers32_mut().Signature = value
     }
     #[inline(always)]
-    pub fn file_header_mut(&mut self) -> &'_ mut IMAGE_FILE_HEADER {
+    pub unsafe fn file_header_mut(&mut self) -> &'_ mut IMAGE_FILE_HEADER {
         &mut self.nt_headers32_mut().FileHeader
     }
 }

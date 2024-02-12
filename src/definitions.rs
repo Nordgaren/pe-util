@@ -25,20 +25,21 @@ pub struct IMAGE_DOS_HEADER {
     pub e_res2: [u16; 10],
     pub e_lfanew: i32,
 }
+const _: () = assert!(std::mem::size_of::<IMAGE_DOS_HEADER>() == 0x40);
 #[repr(C)]
 pub(super) struct IMAGE_NT_HEADERS32 {
     pub Signature: u32,
     pub FileHeader: IMAGE_FILE_HEADER,
     pub OptionalHeader: IMAGE_OPTIONAL_HEADER32,
 }
-
+const _: () = assert!(std::mem::size_of::<IMAGE_NT_HEADERS32>() == 0xF8);
 #[repr(C)]
 pub(super) struct IMAGE_NT_HEADERS64 {
     pub Signature: u32,
     pub FileHeader: IMAGE_FILE_HEADER,
     pub OptionalHeader: IMAGE_OPTIONAL_HEADER64,
 }
-
+const _: () = assert!(std::mem::size_of::<IMAGE_NT_HEADERS64>() == 0x108);
 #[repr(C)]
 pub(super) struct IMAGE_OPTIONAL_HEADER32 {
     pub Magic: u16,
@@ -73,6 +74,7 @@ pub(super) struct IMAGE_OPTIONAL_HEADER32 {
     pub NumberOfRvaAndSizes: u32,
     pub DataDirectory: [IMAGE_DATA_DIRECTORY; IMAGE_NUMBEROF_DIRECTORY_ENTRIES],
 }
+const _: () = assert!(std::mem::size_of::<IMAGE_OPTIONAL_HEADER32>() == 0xE0);
 #[repr(C)]
 pub(super) struct IMAGE_OPTIONAL_HEADER64 {
     pub Magic: u16,
@@ -106,6 +108,7 @@ pub(super) struct IMAGE_OPTIONAL_HEADER64 {
     pub NumberOfRvaAndSizes: u32,
     pub DataDirectory: [IMAGE_DATA_DIRECTORY; IMAGE_NUMBEROF_DIRECTORY_ENTRIES],
 }
+const _: () = assert!(std::mem::size_of::<IMAGE_OPTIONAL_HEADER64>() == 0xF0);
 #[repr(C)]
 //#[derive(Debug)]
 pub struct IMAGE_IMPORT_DESCRIPTOR {
@@ -121,11 +124,13 @@ pub struct IMAGE_IMPORT_DESCRIPTOR {
     // RVA to IAT (if bound this IAT has actual addresses)
     pub FirstThunk: u32,
 }
+const _: () = assert!(std::mem::size_of::<IMAGE_IMPORT_DESCRIPTOR>() == 0x14);
 #[repr(C)]
 pub union IMAGE_IMPORT_DESCRIPTOR_UNION {
     pub Characteristics: u32,
     pub OriginalFirstThunk: u32,
 }
+const _: () = assert!(std::mem::size_of::<IMAGE_IMPORT_DESCRIPTOR_UNION>() == 0x4);
 #[repr(C)]
 pub struct IMAGE_EXPORT_DIRECTORY {
     pub Characteristics: u32,
@@ -142,6 +147,7 @@ pub struct IMAGE_EXPORT_DIRECTORY {
     // RVA from base of image
     pub AddressOfNameOrdinals: u32, // RVA from base of image
 }
+const _: () = assert!(std::mem::size_of::<IMAGE_EXPORT_DIRECTORY>() == 0x28);
 #[repr(C)]
 pub struct IMAGE_FILE_HEADER {
     pub Machine: u16,
@@ -152,16 +158,19 @@ pub struct IMAGE_FILE_HEADER {
     pub SizeOfOptionalHeader: u16,
     pub Characteristics: u16,
 }
+const _: () = assert!(std::mem::size_of::<IMAGE_FILE_HEADER>() == 0x14);
 #[repr(C)]
 pub struct IMAGE_DATA_DIRECTORY {
     pub VirtualAddress: u32,
     pub Size: u32,
 }
+const _: () = assert!(std::mem::size_of::<IMAGE_DATA_DIRECTORY>() == 0x8);
 #[repr(C)]
 pub struct IMAGE_RESOURCE_DIRECTORY_ENTRY {
     pub Id: u32,
     pub OffsetToData: u32,
 }
+const _: () = assert!(std::mem::size_of::<IMAGE_RESOURCE_DIRECTORY_ENTRY>() == 0x8);
 #[repr(C)]
 //[derive(Debug)]
 pub struct IMAGE_SECTION_HEADER {
@@ -176,13 +185,15 @@ pub struct IMAGE_SECTION_HEADER {
     pub NumberOfLinenumbers: u16,
     pub Characteristics: u32,
 }
+const _: () = assert!(std::mem::size_of::<IMAGE_SECTION_HEADER>() == 0x28);
 #[repr(C)]
 pub union IMAGE_SECTION_HEADER_UNION {
     pub PhysicalAddress: u32,
     pub VirtualSize: u32,
 }
+const _: () = assert!(std::mem::size_of::<IMAGE_SECTION_HEADER_UNION>() == 0x4);
 #[repr(C)]
-pub struct RESOURCE_DIRECTORY_TABLE {
+pub struct IMAGE_RESOURCE_DIRECTORY {
     pub Characteristics: u32,
     pub TimeDateStamp: u32,
     pub MajorVersion: u16,
@@ -190,11 +201,12 @@ pub struct RESOURCE_DIRECTORY_TABLE {
     pub NumberOfNameEntries: u16,
     pub NumberOfIDEntries: u16,
 }
+const _: () = assert!(std::mem::size_of::<IMAGE_RESOURCE_DIRECTORY>() == 0x10);
 #[repr(C)]
-pub struct RESOURCE_DATA_ENTRY {
+pub struct IMAGE_RESOURCE_DATA_ENTRY {
     pub DataRVA: u32,
     pub DataSize: u32,
     pub CodePage: u32,
     pub Reserved: u32,
 }
-const _: () = assert!(std::mem::size_of::<RESOURCE_DATA_ENTRY>() == 0x10);
+const _: () = assert!(std::mem::size_of::<IMAGE_RESOURCE_DATA_ENTRY>() == 0x10);

@@ -9,7 +9,7 @@ use crate::definitions::IMAGE_NT_HEADERS32;
 use crate::definitions::{
     IMAGE_DATA_DIRECTORY, IMAGE_DOS_HEADER, IMAGE_EXPORT_DIRECTORY, IMAGE_FILE_HEADER,
     IMAGE_IMPORT_DESCRIPTOR, IMAGE_RESOURCE_DIRECTORY_ENTRY, IMAGE_SECTION_HEADER,
-    RESOURCE_DATA_ENTRY, RESOURCE_DIRECTORY_TABLE,
+    IMAGE_RESOURCE_DATA_ENTRY, IMAGE_RESOURCE_DIRECTORY,
 };
 use crate::dos_header::DosHeader;
 use crate::encoded::PeEncodedPointer;
@@ -278,7 +278,7 @@ impl PE<'_> {
     ///
     /// returns: `PE<NtHeaders>`
     #[inline(always)]
-    pub fn dos_headers_mut(&mut self) -> &mut DosHeader {
+    pub unsafe fn dos_headers_mut(&mut self) -> &mut DosHeader {
         unsafe { &mut *(self as *mut PE as *mut DosHeader) }
     }
     /// Returns the NtHeaders variant of the PE structure.
@@ -292,7 +292,7 @@ impl PE<'_> {
     ///
     /// returns: `PE<NtHeaders>`
     #[inline(always)]
-    pub fn nt_headers_mut(&mut self) -> &mut NtHeaders {
+    pub unsafe fn nt_headers_mut(&mut self) -> &mut NtHeaders {
         unsafe { &mut *(self as *mut PE as *mut NtHeaders) }
     }
     /// Returns the section headers for the PE file as a slice.
@@ -742,7 +742,7 @@ impl PE<'_> {
         unsafe {
             let resource_directory_table = &*((self.pointer.base_address()
                 + resource_directory_table_offset as usize)
-                as *const RESOURCE_DIRECTORY_TABLE);
+                as *const IMAGE_RESOURCE_DIRECTORY);
 
             let resource_data_entry =
                 get_resource_data_entry(resource_directory_table, category_id, resource_id)?;
@@ -772,10 +772,10 @@ impl PE<'_> {
 ///
 /// returns: `Option<&RESOURCE_DATA_ENTRY>`
 fn get_resource_data_entry<'a>(
-    resource_directory_table: &RESOURCE_DIRECTORY_TABLE,
+    resource_directory_table: &IMAGE_RESOURCE_DIRECTORY,
     category_id: u32,
     resource_id: u32,
-) -> Option<&'a RESOURCE_DATA_ENTRY> {
+) -> Option<&'a IMAGE_RESOURCE_DATA_ENTRY> {
     unsafe {
         // SAFETY: Literally the same thing, one is just mut, and the Rust compiler won't implicitly
         // downgrade the mutability, for some reason.
@@ -798,10 +798,10 @@ fn get_resource_data_entry<'a>(
 ///
 /// returns: `Option<&mut RESOURCE_DATA_ENTRY>`
 fn get_resource_data_entry_mut<'a>(
-    resource_directory_table: &RESOURCE_DIRECTORY_TABLE,
+    resource_directory_table: &IMAGE_RESOURCE_DIRECTORY,
     category_id: u32,
     resource_id: u32,
-) -> Option<&'a mut RESOURCE_DATA_ENTRY> {
+) -> Option<&'a mut IMAGE_RESOURCE_DATA_ENTRY> {
     unsafe {
         let resource_directory_table_addr = addr_of!(*resource_directory_table) as usize;
 
@@ -811,31 +811,31 @@ fn get_resource_data_entry_mut<'a>(
 
         //level 2: Resource Name/ID subdirectory
         let resource_directory_table_name_id =
-            &*((resource_directory_table_addr + offset as usize) as *const RESOURCE_DIRECTORY_TABLE);
+            &*((resource_directory_table_addr + offset as usize) as *const IMAGE_RESOURCE_DIRECTORY);
         let mut offset = get_entry_offset_by_id(resource_directory_table_name_id, resource_id)?;
         offset &= 0x7FFFFFFF;
 
         //level 3: language subdirectory - just use the first entry.
         let resource_directory_table_lang =
-            &*((resource_directory_table_addr + offset as usize) as *const RESOURCE_DIRECTORY_TABLE);
+            &*((resource_directory_table_addr + offset as usize) as *const IMAGE_RESOURCE_DIRECTORY);
         let resource_directory_table_lang_entries = addr_of!(*resource_directory_table_lang)
             as usize
-            + std::mem::size_of::<RESOURCE_DIRECTORY_TABLE>();
+            + std::mem::size_of::<IMAGE_RESOURCE_DIRECTORY>();
         let resource_directory_table_lang_entry =
             &*((resource_directory_table_lang_entries) as *const IMAGE_RESOURCE_DIRECTORY_ENTRY);
         let offset = resource_directory_table_lang_entry.OffsetToData;
 
-        Some(&mut *((resource_directory_table_addr + offset as usize) as *mut RESOURCE_DATA_ENTRY))
+        Some(&mut *((resource_directory_table_addr + offset as usize) as *mut IMAGE_RESOURCE_DATA_ENTRY))
     }
 }
 
 unsafe fn get_entry_offset_by_id(
-    resource_directory_table: &RESOURCE_DIRECTORY_TABLE,
+    resource_directory_table: &IMAGE_RESOURCE_DIRECTORY,
     category_id: u32,
 ) -> Option<u32> {
     // We have to skip the Name entries, here, to iterate over the entries by Id.
     let resource_entries_address = addr_of!(*resource_directory_table) as usize
-        + std::mem::size_of::<RESOURCE_DIRECTORY_TABLE>()
+        + std::mem::size_of::<IMAGE_RESOURCE_DIRECTORY>()
         + (std::mem::size_of::<IMAGE_RESOURCE_DIRECTORY_ENTRY>()
         * resource_directory_table.NumberOfNameEntries as usize);
     let resource_directory_entries = std::slice::from_raw_parts(
@@ -853,11 +853,11 @@ unsafe fn get_entry_offset_by_id(
 }
 
 unsafe fn get_entry_offset_by_name(
-    resource_directory_table: &RESOURCE_DIRECTORY_TABLE,
+    resource_directory_table: &IMAGE_RESOURCE_DIRECTORY,
     name: &[u8],
 ) -> Option<u32> {
     let resource_entries_address = addr_of!(*resource_directory_table) as usize
-        + std::mem::size_of::<RESOURCE_DIRECTORY_TABLE>();
+        + std::mem::size_of::<IMAGE_RESOURCE_DIRECTORY>();
     let resource_directory_entries = std::slice::from_raw_parts(
         resource_entries_address as *const IMAGE_RESOURCE_DIRECTORY_ENTRY,
         resource_directory_table.NumberOfNameEntries as usize,
