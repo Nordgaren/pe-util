@@ -197,3 +197,4 @@ pub struct RESOURCE_DATA_ENTRY {
     pub CodePage: u32,
     pub Reserved: u32,
 }
+const _: () = assert!(std::mem::size_of::<RESOURCE_DATA_ENTRY>() == 0x10);

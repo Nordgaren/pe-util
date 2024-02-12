@@ -14,7 +14,6 @@ use encoded_pointer::encoded::EncodedPointer;
 use std::cmp;
 use std::io::{Error, ErrorKind};
 use std::marker::PhantomData;
-use std::mem::size_of;
 use std::str::Utf8Error;
 
 /// Type that represents the `IMAGE_DOS_HEADER` portion of the PE file.
@@ -23,6 +22,7 @@ pub struct DosHeader<'a> {
     pointer: PeEncodedPointer,
     _marker: PhantomData<&'a u8>,
 }
+const _: () = assert!(std::mem::size_of::<DosHeader>() == std::mem::size_of::<usize>());
 
 impl DosHeader<'_> {
     /// Returns a reference to the start of the PE file as an `IMAGE_DOS_HEADER`.

@@ -10,6 +10,7 @@ impl DerefMut for PeEncodedPointer {
         &mut self.0
     }
 }
+const _: () = assert!(std::mem::size_of::<PeEncodedPointer>() == std::mem::size_of::<usize>());
 
 impl Deref for PeEncodedPointer {
     type Target = EncodedPointer;

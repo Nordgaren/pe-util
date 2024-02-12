@@ -13,6 +13,8 @@ pub struct OptionalHeader<'a> {
     pointer: PeEncodedPointer,
     _marker: PhantomData<&'a u8>,
 }
+const _: () = assert!(size_of::<OptionalHeader>() == size_of::<usize>());
+
 impl OptionalHeader<'_> {
     #[inline(always)]
     fn optional_header32(&self) -> &'_ IMAGE_OPTIONAL_HEADER32 {

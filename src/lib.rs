@@ -17,7 +17,6 @@ use crate::nt_headers::NtHeaders;
 use crate::util::{case_insensitive_compare_strs_as_bytes, strlen};
 use crate::FunctionId::{Name, Ordinal};
 use core::marker::PhantomData;
-use core::mem::size_of;
 use core::ptr::addr_of;
 use encoded_pointer::encoded::EncodedPointer;
 use std::io::{Error, ErrorKind};
@@ -60,6 +59,7 @@ pub struct PE<'a> {
     pointer: PeEncodedPointer,
     _marker: PhantomData<&'a u8>,
 }
+const _: () = assert!(std::mem::size_of::<PE>() == std::mem::size_of::<usize>());
 
 /// An enum that represents the various types of ways a function can be Imported or Exported in a PE
 /// file.
@@ -286,14 +286,14 @@ impl PE<'_> {
     /// returns: `PE<NtHeaders>`
     #[inline(always)]
     pub fn nt_headers(&self) -> &NtHeaders {
-        unsafe { std::mem::transmute(self) }
+        unsafe { &*(self as *const PE as *const NtHeaders) }
     }
     /// Returns the NtHeaders variant of the PE structure.
     ///
     /// returns: `PE<NtHeaders>`
     #[inline(always)]
     pub fn nt_headers_mut(&mut self) -> &mut NtHeaders {
-        unsafe { std::mem::transmute(self) }
+        unsafe { &mut *(self as *mut PE as *mut NtHeaders) }
     }
     /// Returns the section headers for the PE file as a slice.
     ///
@@ -344,7 +344,7 @@ impl PE<'_> {
 
         let import_table_addr =
             self.pointer.base_address() + self.rva_to_foa(import_data_dir.VirtualAddress)? as usize;
-        let length = import_data_dir.Size as usize / size_of::<IMAGE_IMPORT_DESCRIPTOR>();
+        let length = import_data_dir.Size as usize / std::mem::size_of::<IMAGE_IMPORT_DESCRIPTOR>();
 
         let import_descriptor_table = std::slice::from_raw_parts(
             import_table_addr as *const IMAGE_IMPORT_DESCRIPTOR,
@@ -815,7 +815,7 @@ fn get_resource_data_entry_mut<'a>(
             std::mem::transmute(resource_directory_table_addr + offset as usize);
         let resource_directory_table_lang_entries = addr_of!(*resource_directory_table_lang)
             as usize
-            + size_of::<RESOURCE_DIRECTORY_TABLE>();
+            + std::mem::size_of::<RESOURCE_DIRECTORY_TABLE>();
         let resource_directory_table_lang_entry: &IMAGE_RESOURCE_DIRECTORY_ENTRY =
             std::mem::transmute(resource_directory_table_lang_entries);
         let offset = resource_directory_table_lang_entry.OffsetToData;
@@ -832,8 +832,8 @@ unsafe fn get_entry_offset_by_id(
 ) -> Option<u32> {
     // We have to skip the Name entries, here, to iterate over the entries by Id.
     let resource_entries_address = addr_of!(*resource_directory_table) as usize
-        + size_of::<RESOURCE_DIRECTORY_TABLE>()
-        + (size_of::<IMAGE_RESOURCE_DIRECTORY_ENTRY>()
+        + std::mem::size_of::<RESOURCE_DIRECTORY_TABLE>()
+        + (std::mem::size_of::<IMAGE_RESOURCE_DIRECTORY_ENTRY>()
             * resource_directory_table.NumberOfNameEntries as usize);
     let resource_directory_entries = std::slice::from_raw_parts(
         resource_entries_address as *const IMAGE_RESOURCE_DIRECTORY_ENTRY,
@@ -854,7 +854,7 @@ unsafe fn get_entry_offset_by_name(
     name: &[u8],
 ) -> Option<u32> {
     let resource_entries_address =
-        addr_of!(*resource_directory_table) as usize + size_of::<RESOURCE_DIRECTORY_TABLE>();
+        addr_of!(*resource_directory_table) as usize + std::mem::size_of::<RESOURCE_DIRECTORY_TABLE>();
     let resource_directory_entries = std::slice::from_raw_parts(
         resource_entries_address as *const IMAGE_RESOURCE_DIRECTORY_ENTRY,
         resource_directory_table.NumberOfNameEntries as usize,

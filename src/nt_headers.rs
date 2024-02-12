@@ -4,7 +4,6 @@ use crate::optional_header::OptionalHeader;
 use crate::{PeEncodedPointer, PE};
 use encoded_pointer::encoded::EncodedPointer;
 use std::marker::PhantomData;
-use std::mem::size_of;
 
 /// Type that represents the `IMAGE_NT_HEADERS` portion of the PE file
 #[repr(C)]
@@ -12,6 +11,8 @@ pub struct NtHeaders<'a> {
     pointer: PeEncodedPointer,
     _marker: PhantomData<&'a u8>,
 }
+const _: () = assert!(std::mem::size_of::<NtHeaders>() == std::mem::size_of::<usize>());
+
 impl NtHeaders<'_> {
     #[inline(always)]
     fn nt_headers32(&self) -> &'_ IMAGE_NT_HEADERS32 {
@@ -40,9 +41,9 @@ impl NtHeaders<'_> {
     #[inline(always)]
     pub fn size_of(&self) -> usize {
         if self.pointer.is_64bit() {
-            size_of::<IMAGE_NT_HEADERS64>()
+            std::mem::size_of::<IMAGE_NT_HEADERS64>()
         } else {
-            size_of::<IMAGE_NT_HEADERS32>()
+            std::mem::size_of::<IMAGE_NT_HEADERS32>()
         }
     }
 }

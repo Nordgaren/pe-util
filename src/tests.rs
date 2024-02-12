@@ -185,14 +185,6 @@ fn get_exports() {
     }
 }
 
-#[test]
-fn size() {
-    assert_eq!(size_of::<PE>(), size_of::<usize>());
-    assert_eq!(size_of::<DosHeader>(), size_of::<usize>());
-    assert_eq!(size_of::<NtHeaders>(), size_of::<usize>());
-    assert_eq!(size_of::<OptionalHeader>(), size_of::<usize>());
-}
-
 // These tests should not compile.
 //       |
 //       |             let file = fs::read(format!("{path}\\notepad.exe")).unwrap();
