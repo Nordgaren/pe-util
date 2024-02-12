@@ -17,7 +17,7 @@ use std::marker::PhantomData;
 use std::str::Utf8Error;
 
 /// Type that represents the `IMAGE_DOS_HEADER` portion of the PE file.
-#[repr(C)]
+#[repr(transparent)]
 pub struct DosHeader<'a> {
     pointer: PeEncodedPointer,
     _marker: PhantomData<&'a u8>,

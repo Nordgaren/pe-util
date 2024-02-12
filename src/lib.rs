@@ -54,7 +54,7 @@ mod util;
 ///     println!("{}", res.len());
 /// }
 /// ```
-#[repr(C)]
+#[repr(transparent)]
 pub struct PE<'a> {
     pointer: PeEncodedPointer,
     _marker: PhantomData<&'a u8>,
@@ -371,9 +371,9 @@ impl PE<'_> {
         if export_data_dir.Size == 0 {
             return self.check_mapped_by_section();
         }
-        let export_table_addr: &IMAGE_EXPORT_DIRECTORY = std::mem::transmute(
-            self.pointer.base_address() + self.rva_to_foa(export_data_dir.VirtualAddress)? as usize,
-        );
+        let export_table_addr = &*((self.pointer.base_address()
+            + self.rva_to_foa(export_data_dir.VirtualAddress)? as usize)
+            as *const IMAGE_EXPORT_DIRECTORY);
 
         let function_name_table = std::slice::from_raw_parts(
             (self.pointer.base_address()
@@ -461,8 +461,9 @@ impl PE<'_> {
             export_directory_offset = self.rva_to_foa(export_directory_offset)?;
         }
 
-        let export_directory: &'static IMAGE_EXPORT_DIRECTORY = unsafe {
-            std::mem::transmute(self.pointer.base_address() + export_directory_offset as usize)
+        let export_directory = unsafe {
+            &*((self.pointer.base_address() + export_directory_offset as usize)
+                as *const IMAGE_EXPORT_DIRECTORY)
         };
 
         let mut export_address_table_rva = export_directory.AddressOfFunctions;
@@ -560,8 +561,9 @@ impl PE<'_> {
             export_directory_offset = self.rva_to_foa(export_directory_offset)?;
         }
 
-        let export_directory: &'static IMAGE_EXPORT_DIRECTORY = unsafe {
-            std::mem::transmute(self.pointer.base_address() + export_directory_offset as usize)
+        let export_directory = unsafe {
+            &*((self.pointer.base_address() + export_directory_offset as usize)
+                as *const IMAGE_EXPORT_DIRECTORY)
         };
 
         let mut name_table_offset = export_directory.AddressOfNames;
@@ -626,8 +628,9 @@ impl PE<'_> {
             export_directory_offset = self.rva_to_foa(export_directory_offset)?;
         }
 
-        let export_directory: &'static IMAGE_EXPORT_DIRECTORY = unsafe {
-            std::mem::transmute(self.pointer.base_address() + export_directory_offset as usize)
+        let export_directory = unsafe {
+            &*((self.pointer.base_address() + export_directory_offset as usize)
+                as *const IMAGE_EXPORT_DIRECTORY)
         };
 
         let mut name_table_offset = export_directory.AddressOfNames;
@@ -684,8 +687,8 @@ impl PE<'_> {
             let export_dir =
                 &optional_header.data_directory()[IMAGE_DIRECTORY_ENTRY_EXPORT as usize];
 
-            let image_export_directory: &IMAGE_EXPORT_DIRECTORY =
-                std::mem::transmute(base_addr + export_dir.VirtualAddress as usize);
+            let image_export_directory = &*((base_addr + export_dir.VirtualAddress as usize)
+                as *const IMAGE_EXPORT_DIRECTORY);
 
             let name_dir = std::slice::from_raw_parts(
                 (base_addr + image_export_directory.AddressOfNames as usize) as *const u32,
@@ -737,9 +740,9 @@ impl PE<'_> {
             resource_directory_table_offset = self.rva_to_foa(resource_directory_table_offset)?
         }
         unsafe {
-            let resource_directory_table: &RESOURCE_DIRECTORY_TABLE = std::mem::transmute(
-                self.pointer.base_address() + resource_directory_table_offset as usize,
-            );
+            let resource_directory_table = &*((self.pointer.base_address()
+                + resource_directory_table_offset as usize)
+                as *const RESOURCE_DIRECTORY_TABLE);
 
             let resource_data_entry =
                 get_resource_data_entry(resource_directory_table, category_id, resource_id)?;
@@ -774,6 +777,8 @@ fn get_resource_data_entry<'a>(
     resource_id: u32,
 ) -> Option<&'a RESOURCE_DATA_ENTRY> {
     unsafe {
+        // SAFETY: Literally the same thing, one is just mut, and the Rust compiler won't implicitly
+        // downgrade the mutability, for some reason.
         std::mem::transmute(get_resource_data_entry_mut(
             resource_directory_table,
             category_id,
@@ -805,24 +810,22 @@ fn get_resource_data_entry_mut<'a>(
         offset &= 0x7FFFFFFF;
 
         //level 2: Resource Name/ID subdirectory
-        let resource_directory_table_name_id: &RESOURCE_DIRECTORY_TABLE =
-            std::mem::transmute(resource_directory_table_addr + offset as usize);
+        let resource_directory_table_name_id =
+            &*((resource_directory_table_addr + offset as usize) as *const RESOURCE_DIRECTORY_TABLE);
         let mut offset = get_entry_offset_by_id(resource_directory_table_name_id, resource_id)?;
         offset &= 0x7FFFFFFF;
 
         //level 3: language subdirectory - just use the first entry.
-        let resource_directory_table_lang: &RESOURCE_DIRECTORY_TABLE =
-            std::mem::transmute(resource_directory_table_addr + offset as usize);
+        let resource_directory_table_lang =
+            &*((resource_directory_table_addr + offset as usize) as *const RESOURCE_DIRECTORY_TABLE);
         let resource_directory_table_lang_entries = addr_of!(*resource_directory_table_lang)
             as usize
             + std::mem::size_of::<RESOURCE_DIRECTORY_TABLE>();
-        let resource_directory_table_lang_entry: &IMAGE_RESOURCE_DIRECTORY_ENTRY =
-            std::mem::transmute(resource_directory_table_lang_entries);
+        let resource_directory_table_lang_entry =
+            &*((resource_directory_table_lang_entries) as *const IMAGE_RESOURCE_DIRECTORY_ENTRY);
         let offset = resource_directory_table_lang_entry.OffsetToData;
 
-        Some(std::mem::transmute(
-            resource_directory_table_addr + offset as usize,
-        ))
+        Some(&mut *((resource_directory_table_addr + offset as usize) as *mut RESOURCE_DATA_ENTRY))
     }
 }
 
@@ -834,7 +837,7 @@ unsafe fn get_entry_offset_by_id(
     let resource_entries_address = addr_of!(*resource_directory_table) as usize
         + std::mem::size_of::<RESOURCE_DIRECTORY_TABLE>()
         + (std::mem::size_of::<IMAGE_RESOURCE_DIRECTORY_ENTRY>()
-            * resource_directory_table.NumberOfNameEntries as usize);
+        * resource_directory_table.NumberOfNameEntries as usize);
     let resource_directory_entries = std::slice::from_raw_parts(
         resource_entries_address as *const IMAGE_RESOURCE_DIRECTORY_ENTRY,
         resource_directory_table.NumberOfIDEntries as usize,
@@ -853,8 +856,8 @@ unsafe fn get_entry_offset_by_name(
     resource_directory_table: &RESOURCE_DIRECTORY_TABLE,
     name: &[u8],
 ) -> Option<u32> {
-    let resource_entries_address =
-        addr_of!(*resource_directory_table) as usize + std::mem::size_of::<RESOURCE_DIRECTORY_TABLE>();
+    let resource_entries_address = addr_of!(*resource_directory_table) as usize
+        + std::mem::size_of::<RESOURCE_DIRECTORY_TABLE>();
     let resource_directory_entries = std::slice::from_raw_parts(
         resource_entries_address as *const IMAGE_RESOURCE_DIRECTORY_ENTRY,
         resource_directory_table.NumberOfNameEntries as usize,

@@ -6,7 +6,7 @@ use encoded_pointer::encoded::EncodedPointer;
 use std::marker::PhantomData;
 
 /// Type that represents the `IMAGE_NT_HEADERS` portion of the PE file
-#[repr(C)]
+#[repr(transparent)]
 pub struct NtHeaders<'a> {
     pointer: PeEncodedPointer,
     _marker: PhantomData<&'a u8>,
@@ -16,11 +16,11 @@ const _: () = assert!(std::mem::size_of::<NtHeaders>() == std::mem::size_of::<us
 impl NtHeaders<'_> {
     #[inline(always)]
     fn nt_headers32(&self) -> &'_ IMAGE_NT_HEADERS32 {
-        unsafe { std::mem::transmute(self.pointer.nt_headers_address()) }
+        unsafe { &mut *(self.pointer.nt_headers_address() as *mut IMAGE_NT_HEADERS32) }
     }
     #[inline(always)]
     fn nt_headers64(&self) -> &'_ IMAGE_NT_HEADERS64 {
-        unsafe { std::mem::transmute(self.pointer.nt_headers_address()) }
+        unsafe { &mut *(self.pointer.nt_headers_address() as *mut IMAGE_NT_HEADERS64) }
     }
     #[inline(always)]
     pub fn signature(&self) -> u32 {
@@ -32,11 +32,11 @@ impl NtHeaders<'_> {
     }
     #[inline(always)]
     pub fn optional_header(&self) -> &OptionalHeader {
-        unsafe { std::mem::transmute(self) }
+        unsafe { &*(self as *const NtHeaders as *const OptionalHeader) }
     }
     #[inline(always)]
     pub fn optional_header_mut(&mut self) -> &mut OptionalHeader {
-        unsafe { std::mem::transmute(self) }
+        unsafe { &mut *(self as *mut NtHeaders as *mut OptionalHeader) }
     }
     #[inline(always)]
     pub fn size_of(&self) -> usize {
@@ -51,11 +51,11 @@ impl NtHeaders<'_> {
 impl NtHeaders<'_> {
     #[inline(always)]
     fn nt_headers32_mut(&mut self) -> &'_ mut IMAGE_NT_HEADERS32 {
-        unsafe { std::mem::transmute(self.pointer.nt_headers_address()) }
+        unsafe { &mut *(self.pointer.nt_headers_address() as *mut IMAGE_NT_HEADERS32) }
     }
     #[inline(always)]
     fn nt_headers64_mut(&mut self) -> &'_ mut IMAGE_NT_HEADERS64 {
-        unsafe { std::mem::transmute(self.pointer.nt_headers_address()) }
+        unsafe { &mut *(self.pointer.nt_headers_address() as *mut IMAGE_NT_HEADERS64) }
     }
     #[inline(always)]
     pub fn set_signature(&mut self, value: u32) {

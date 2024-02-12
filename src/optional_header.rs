@@ -8,7 +8,7 @@ use std::mem;
 use std::mem::size_of;
 
 /// Type that represents the `IMAGE_OPTIONAL_HEADER` portion of the PE file
-#[repr(C)]
+#[repr(transparent)]
 pub struct OptionalHeader<'a> {
     pointer: PeEncodedPointer,
     _marker: PhantomData<&'a u8>,
@@ -18,11 +18,11 @@ const _: () = assert!(size_of::<OptionalHeader>() == size_of::<usize>());
 impl OptionalHeader<'_> {
     #[inline(always)]
     fn optional_header32(&self) -> &'_ IMAGE_OPTIONAL_HEADER32 {
-        unsafe { mem::transmute(self.pointer.optional_header_address()) }
+        unsafe { &*(self.pointer.optional_header_address() as *const IMAGE_OPTIONAL_HEADER32) }
     }
     #[inline(always)]
     fn optional_header64(&self) -> &'_ IMAGE_OPTIONAL_HEADER64 {
-        unsafe { mem::transmute(self.pointer.optional_header_address()) }
+        unsafe { &*(self.pointer.optional_header_address() as *const IMAGE_OPTIONAL_HEADER64) }
     }
     #[inline(always)]
     pub fn magic(&self) -> u16 {
@@ -245,11 +245,11 @@ impl OptionalHeader<'_> {
 impl OptionalHeader<'_> {
     #[inline(always)]
     fn optional_header32_mut(&mut self) -> &'_ mut IMAGE_OPTIONAL_HEADER32 {
-        unsafe { mem::transmute(self.pointer.optional_header_address()) }
+        unsafe { &mut *(self.pointer.optional_header_address() as *mut IMAGE_OPTIONAL_HEADER32) }
     }
     #[inline(always)]
     fn optional_header64_mut(&mut self) -> &'_ mut IMAGE_OPTIONAL_HEADER64 {
-        unsafe { mem::transmute(self.pointer.optional_header_address()) }
+        unsafe { &mut *(self.pointer.optional_header_address() as *mut IMAGE_OPTIONAL_HEADER64) }
     }
     #[inline(always)]
     pub fn set_magic(&mut self, value: u16) {
