@@ -269,8 +269,14 @@ impl PE<'_> {
         }
     }
     /// Returns the section headers for the PE file as a mutable slice.
+    ///
+    /// # Safety
+    ///
+    /// The caller has to guarantee that they are upholding rusts mutability invariance with the original
+    /// buffer that holds the PE. Mutating the `IMAGE_SECTION_HEADER` of a PE that has another mutable reference
+    /// could result in undefined behaviour. Edit PE files your program doesn't own at your own risk.
     #[inline(always)]
-    pub fn section_headers_mut(&mut self) -> &'_ mut [IMAGE_SECTION_HEADER] {
+    pub unsafe fn section_headers_mut(&mut self) -> &'_ mut [IMAGE_SECTION_HEADER] {
         let section_headers_base = self.pointer.nt_headers_address() + self.nt_headers().size_of();
         unsafe {
             std::slice::from_raw_parts_mut(
