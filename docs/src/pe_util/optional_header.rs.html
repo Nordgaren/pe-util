@@ -452,219 +452,235 @@
 <a href="#452" id="452">452</a>
 <a href="#453" id="453">453</a>
 <a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::definitions::{IMAGE_DATA_DIRECTORY, IMAGE_OPTIONAL_HEADER32, IMAGE_OPTIONAL_HEADER64};
-<span class="kw">use </span><span class="kw">crate</span>::PE;
+<span class="kw">use </span><span class="kw">crate</span>::dos_header::DosHeader;
+<span class="kw">use </span><span class="kw">crate</span>::nt_headers::NtHeaders;
+<span class="kw">use crate</span>::{PeEncodedPointer, PE};
+<span class="kw">use </span>encoded_pointer::encoded::EncodedPointer;
+<span class="kw">use </span>std::marker::PhantomData;
 <span class="kw">use </span>std::mem;
 <span class="kw">use </span>std::mem::size_of;
 
-<span class="doccomment">/// ZST that represents the IMAGE_OPTIONAL_HEADER portion of the PE file
-</span><span class="attr">#[derive(Copy, Clone)]
-</span><span class="kw">pub struct </span>OptionalHeader;
+<span class="doccomment">/// Type that represents the `IMAGE_OPTIONAL_HEADER` portion of the PE file
+</span><span class="attr">#[repr(transparent)]
+</span><span class="kw">pub struct </span>OptionalHeader&lt;<span class="lifetime">&#39;a</span>&gt; {
+    pointer: PeEncodedPointer,
+    _marker: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u8&gt;,
+}
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(size_of::&lt;OptionalHeader&gt;() == size_of::&lt;usize&gt;());
 
-<span class="kw">impl </span>PE&lt;<span class="lifetime">&#39;_</span>, OptionalHeader&gt; {
+<span class="kw">impl </span>OptionalHeader&lt;<span class="lifetime">&#39;_</span>&gt; {
     <span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>optional_header32(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>IMAGE_OPTIONAL_HEADER32 {
-        <span class="kw">unsafe </span>{ mem::transmute(<span class="self">self</span>.optional_header_address()) }
+        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(<span class="self">self</span>.pointer.optional_header_address() <span class="kw">as </span><span class="kw-2">*const </span>IMAGE_OPTIONAL_HEADER32) }
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>optional_header64(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>IMAGE_OPTIONAL_HEADER64 {
-        <span class="kw">unsafe </span>{ mem::transmute(<span class="self">self</span>.optional_header_address()) }
+        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(<span class="self">self</span>.pointer.optional_header_address() <span class="kw">as </span><span class="kw-2">*const </span>IMAGE_OPTIONAL_HEADER64) }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>magic(<span class="self">self</span>) -&gt; u16 {
+    </span><span class="kw">pub fn </span>magic(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u16 {
         <span class="self">self</span>.optional_header32().Magic
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>major_linker_version(<span class="self">self</span>) -&gt; u8 {
+    </span><span class="kw">pub fn </span>major_linker_version(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u8 {
         <span class="self">self</span>.optional_header32().MajorLinkerVersion
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>minor_linker_version(<span class="self">self</span>) -&gt; u8 {
+    </span><span class="kw">pub fn </span>minor_linker_version(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u8 {
         <span class="self">self</span>.optional_header32().MinorLinkerVersion
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>size_of_code(<span class="self">self</span>) -&gt; u32 {
+    </span><span class="kw">pub fn </span>size_of_code(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
         <span class="self">self</span>.optional_header32().SizeOfCode
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>size_of_initialized_data(<span class="self">self</span>) -&gt; u32 {
+    </span><span class="kw">pub fn </span>size_of_initialized_data(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
         <span class="self">self</span>.optional_header32().SizeOfInitializedData
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>size_of_uninitialized_data(<span class="self">self</span>) -&gt; u32 {
+    </span><span class="kw">pub fn </span>size_of_uninitialized_data(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
         <span class="self">self</span>.optional_header32().SizeOfUninitializedData
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>address_of_entry_point(<span class="self">self</span>) -&gt; u32 {
+    </span><span class="kw">pub fn </span>address_of_entry_point(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
         <span class="self">self</span>.optional_header32().AddressOfEntryPoint
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>base_of_code(<span class="self">self</span>) -&gt; u32 {
+    </span><span class="kw">pub fn </span>base_of_code(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
         <span class="self">self</span>.optional_header32().BaseOfCode
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>image_base(<span class="self">self</span>) -&gt; u64 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>image_base(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().ImageBase
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().ImageBase <span class="kw">as </span>u64
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>section_alignment(<span class="self">self</span>) -&gt; u32 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>section_alignment(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().SectionAlignment
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().SectionAlignment
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>file_alignment(<span class="self">self</span>) -&gt; u32 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>file_alignment(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().FileAlignment
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().FileAlignment
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>major_operating_system_version(<span class="self">self</span>) -&gt; u16 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>major_operating_system_version(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u16 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().MajorOperatingSystemVersion
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().MajorOperatingSystemVersion
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>minor_operating_system_version(<span class="self">self</span>) -&gt; u16 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>minor_operating_system_version(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u16 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().MinorOperatingSystemVersion
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().MinorOperatingSystemVersion
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>major_image_version(<span class="self">self</span>) -&gt; u16 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>major_image_version(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u16 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().MajorImageVersion
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().MajorImageVersion
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>minor_image_version(<span class="self">self</span>) -&gt; u16 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>minor_image_version(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u16 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().MinorImageVersion
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().MinorImageVersion
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>major_subsystem_version(<span class="self">self</span>) -&gt; u16 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>major_subsystem_version(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u16 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().MajorSubsystemVersion
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().MajorSubsystemVersion
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>minor_subsystem_version(<span class="self">self</span>) -&gt; u16 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>minor_subsystem_version(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u16 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().MinorSubsystemVersion
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().MinorSubsystemVersion
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>win32_version_value(<span class="self">self</span>) -&gt; u32 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>win32_version_value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().Win32VersionValue
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().Win32VersionValue
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>size_of_image(<span class="self">self</span>) -&gt; u32 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>size_of_image(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().SizeOfImage
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().SizeOfImage
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>size_of_headers(<span class="self">self</span>) -&gt; u32 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>size_of_headers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().SizeOfHeaders
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().SizeOfHeaders
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>check_sum(<span class="self">self</span>) -&gt; u32 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>check_sum(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().CheckSum
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().CheckSum
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>subsystem(<span class="self">self</span>) -&gt; u16 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>subsystem(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u16 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().Subsystem
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().Subsystem
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>dll_characteristics(<span class="self">self</span>) -&gt; u16 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>dll_characteristics(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u16 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().DllCharacteristics
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().DllCharacteristics
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>size_of_stack_reserve(<span class="self">self</span>) -&gt; u64 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>size_of_stack_reserve(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().SizeOfStackReserve
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().SizeOfStackReserve <span class="kw">as </span>u64
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>size_of_stack_commit(<span class="self">self</span>) -&gt; u64 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>size_of_stack_commit(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().SizeOfStackCommit
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().SizeOfStackCommit <span class="kw">as </span>u64
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>size_of_heap_reserve(<span class="self">self</span>) -&gt; u64 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>size_of_heap_reserve(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().SizeOfHeapReserve
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().SizeOfHeapReserve <span class="kw">as </span>u64
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>size_of_heap_commit(<span class="self">self</span>) -&gt; u64 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>size_of_heap_commit(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().SizeOfHeapCommit
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().SizeOfHeapCommit <span class="kw">as </span>u64
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>loader_flags(<span class="self">self</span>) -&gt; u32 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>loader_flags(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().LoaderFlags
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().LoaderFlags
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>number_of_rva_and_sizes(<span class="self">self</span>) -&gt; u32 {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>number_of_rva_and_sizes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64().NumberOfRvaAndSizes
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32().NumberOfRvaAndSizes
@@ -672,15 +688,15 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>data_directory(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>[IMAGE_DATA_DIRECTORY] {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="kw-2">&amp;</span><span class="self">self</span>.optional_header64().DataDirectory
         } <span class="kw">else </span>{
             <span class="kw-2">&amp;</span><span class="self">self</span>.optional_header32().DataDirectory
         }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>size_of(<span class="self">self</span>) -&gt; usize {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+    </span><span class="kw">pub fn </span>size_of(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             size_of::&lt;IMAGE_OPTIONAL_HEADER64&gt;()
         } <span class="kw">else </span>{
             size_of::&lt;IMAGE_OPTIONAL_HEADER32&gt;()
@@ -688,14 +704,14 @@
     }
 }
 
-<span class="kw">impl </span>PE&lt;<span class="lifetime">&#39;_</span>, OptionalHeader&gt; {
+<span class="kw">impl </span>OptionalHeader&lt;<span class="lifetime">&#39;_</span>&gt; {
     <span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>optional_header32_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span><span class="kw-2">mut </span>IMAGE_OPTIONAL_HEADER32 {
-        <span class="kw">unsafe </span>{ mem::transmute(<span class="self">self</span>.optional_header_address()) }
+        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self</span>.pointer.optional_header_address() <span class="kw">as </span><span class="kw-2">*mut </span>IMAGE_OPTIONAL_HEADER32) }
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>optional_header64_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span><span class="kw-2">mut </span>IMAGE_OPTIONAL_HEADER64 {
-        <span class="kw">unsafe </span>{ mem::transmute(<span class="self">self</span>.optional_header_address()) }
+        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self</span>.pointer.optional_header_address() <span class="kw">as </span><span class="kw-2">*mut </span>IMAGE_OPTIONAL_HEADER64) }
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_magic(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u16) {
@@ -731,7 +747,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_image_base(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u64) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().ImageBase = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().ImageBase = value <span class="kw">as </span>u32
@@ -739,7 +755,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_section_alignment(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().SectionAlignment = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().SectionAlignment = value
@@ -747,7 +763,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_file_alignment(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().FileAlignment = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().FileAlignment = value
@@ -755,7 +771,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_major_operating_system_version(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u16) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().MajorOperatingSystemVersion = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().MajorOperatingSystemVersion = value
@@ -763,7 +779,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_minor_operating_system_version(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u16) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().MinorOperatingSystemVersion = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().MinorOperatingSystemVersion = value
@@ -771,7 +787,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_major_image_version(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u16) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().MajorImageVersion = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().MajorImageVersion = value
@@ -779,7 +795,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_minor_image_version(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u16) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().MinorImageVersion = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().MinorImageVersion = value
@@ -787,7 +803,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_major_subsystem_version(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u16) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().MajorSubsystemVersion = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().MajorSubsystemVersion = value
@@ -795,7 +811,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_minor_subsystem_version(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u16) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().MinorSubsystemVersion = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().MinorSubsystemVersion = value
@@ -803,7 +819,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_win32_version_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().Win32VersionValue = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().Win32VersionValue = value
@@ -811,7 +827,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_size_of_image(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().SizeOfImage = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().SizeOfImage = value
@@ -819,7 +835,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_size_of_headers(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().SizeOfHeaders = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().SizeOfHeaders = value
@@ -827,7 +843,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_check_sum(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().CheckSum = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().CheckSum = value
@@ -835,7 +851,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_subsystem(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u16) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().Subsystem = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().Subsystem = value
@@ -843,7 +859,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_dll_characteristics(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u16) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().DllCharacteristics = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().DllCharacteristics = value
@@ -851,7 +867,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_size_of_stack_reserve(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u64) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().SizeOfStackReserve = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().SizeOfStackReserve = value <span class="kw">as </span>u32
@@ -859,7 +875,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_size_of_stack_commit(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u64) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().SizeOfStackCommit = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().SizeOfStackCommit = value <span class="kw">as </span>u32
@@ -867,7 +883,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_size_of_heap_reserve(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u64) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().SizeOfHeapReserve = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().SizeOfHeapReserve = value <span class="kw">as </span>u32
@@ -875,7 +891,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_size_of_heap_commit(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u64) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().SizeOfHeapCommit = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().SizeOfHeapCommit = value <span class="kw">as </span>u32
@@ -883,7 +899,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_loader_flags(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().LoaderFlags = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().LoaderFlags = value
@@ -891,7 +907,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_number_of_rva_and_sizes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32) {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="self">self</span>.optional_header64_mut().NumberOfRvaAndSizes = value
         } <span class="kw">else </span>{
             <span class="self">self</span>.optional_header32_mut().NumberOfRvaAndSizes = value
@@ -899,7 +915,7 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>data_directory_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span><span class="kw-2">mut </span>[IMAGE_DATA_DIRECTORY] {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
             <span class="kw-2">&amp;mut </span><span class="self">self</span>.optional_header64_mut().DataDirectory
         } <span class="kw">else </span>{
             <span class="kw-2">&amp;mut </span><span class="self">self</span>.optional_header32_mut().DataDirectory

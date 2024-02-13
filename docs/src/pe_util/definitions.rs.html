@@ -197,6 +197,19 @@
 <a href="#197" id="197">197</a>
 <a href="#198" id="198">198</a>
 <a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(unused)]
@@ -224,20 +237,21 @@
     <span class="kw">pub </span>e_res2: [u16; <span class="number">10</span>],
     <span class="kw">pub </span>e_lfanew: i32,
 }
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;IMAGE_DOS_HEADER&gt;() == <span class="number">0x40</span>);
 <span class="attr">#[repr(C)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>IMAGE_NT_HEADERS32 {
     <span class="kw">pub </span>Signature: u32,
     <span class="kw">pub </span>FileHeader: IMAGE_FILE_HEADER,
     <span class="kw">pub </span>OptionalHeader: IMAGE_OPTIONAL_HEADER32,
 }
-
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;IMAGE_NT_HEADERS32&gt;() == <span class="number">0xF8</span>);
 <span class="attr">#[repr(C)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>IMAGE_NT_HEADERS64 {
     <span class="kw">pub </span>Signature: u32,
     <span class="kw">pub </span>FileHeader: IMAGE_FILE_HEADER,
     <span class="kw">pub </span>OptionalHeader: IMAGE_OPTIONAL_HEADER64,
 }
-
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;IMAGE_NT_HEADERS64&gt;() == <span class="number">0x108</span>);
 <span class="attr">#[repr(C)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>IMAGE_OPTIONAL_HEADER32 {
     <span class="kw">pub </span>Magic: u16,
@@ -272,6 +286,7 @@
     <span class="kw">pub </span>NumberOfRvaAndSizes: u32,
     <span class="kw">pub </span>DataDirectory: [IMAGE_DATA_DIRECTORY; IMAGE_NUMBEROF_DIRECTORY_ENTRIES],
 }
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;IMAGE_OPTIONAL_HEADER32&gt;() == <span class="number">0xE0</span>);
 <span class="attr">#[repr(C)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>IMAGE_OPTIONAL_HEADER64 {
     <span class="kw">pub </span>Magic: u16,
@@ -305,6 +320,7 @@
     <span class="kw">pub </span>NumberOfRvaAndSizes: u32,
     <span class="kw">pub </span>DataDirectory: [IMAGE_DATA_DIRECTORY; IMAGE_NUMBEROF_DIRECTORY_ENTRIES],
 }
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;IMAGE_OPTIONAL_HEADER64&gt;() == <span class="number">0xF0</span>);
 <span class="attr">#[repr(C)]
 </span><span class="comment">//#[derive(Debug)]
 </span><span class="kw">pub struct </span>IMAGE_IMPORT_DESCRIPTOR {
@@ -320,11 +336,13 @@
     <span class="comment">// RVA to IAT (if bound this IAT has actual addresses)
     </span><span class="kw">pub </span>FirstThunk: u32,
 }
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;IMAGE_IMPORT_DESCRIPTOR&gt;() == <span class="number">0x14</span>);
 <span class="attr">#[repr(C)]
 </span><span class="kw">pub union </span>IMAGE_IMPORT_DESCRIPTOR_UNION {
     <span class="kw">pub </span>Characteristics: u32,
     <span class="kw">pub </span>OriginalFirstThunk: u32,
 }
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;IMAGE_IMPORT_DESCRIPTOR_UNION&gt;() == <span class="number">0x4</span>);
 <span class="attr">#[repr(C)]
 </span><span class="kw">pub struct </span>IMAGE_EXPORT_DIRECTORY {
     <span class="kw">pub </span>Characteristics: u32,
@@ -341,6 +359,7 @@
     <span class="comment">// RVA from base of image
     </span><span class="kw">pub </span>AddressOfNameOrdinals: u32, <span class="comment">// RVA from base of image
 </span>}
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;IMAGE_EXPORT_DIRECTORY&gt;() == <span class="number">0x28</span>);
 <span class="attr">#[repr(C)]
 </span><span class="kw">pub struct </span>IMAGE_FILE_HEADER {
     <span class="kw">pub </span>Machine: u16,
@@ -351,16 +370,19 @@
     <span class="kw">pub </span>SizeOfOptionalHeader: u16,
     <span class="kw">pub </span>Characteristics: u16,
 }
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;IMAGE_FILE_HEADER&gt;() == <span class="number">0x14</span>);
 <span class="attr">#[repr(C)]
 </span><span class="kw">pub struct </span>IMAGE_DATA_DIRECTORY {
     <span class="kw">pub </span>VirtualAddress: u32,
     <span class="kw">pub </span>Size: u32,
 }
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;IMAGE_DATA_DIRECTORY&gt;() == <span class="number">0x8</span>);
 <span class="attr">#[repr(C)]
 </span><span class="kw">pub struct </span>IMAGE_RESOURCE_DIRECTORY_ENTRY {
     <span class="kw">pub </span>Id: u32,
     <span class="kw">pub </span>OffsetToData: u32,
 }
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;IMAGE_RESOURCE_DIRECTORY_ENTRY&gt;() == <span class="number">0x8</span>);
 <span class="attr">#[repr(C)]
 </span><span class="comment">//[derive(Debug)]
 </span><span class="kw">pub struct </span>IMAGE_SECTION_HEADER {
@@ -375,13 +397,15 @@
     <span class="kw">pub </span>NumberOfLinenumbers: u16,
     <span class="kw">pub </span>Characteristics: u32,
 }
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;IMAGE_SECTION_HEADER&gt;() == <span class="number">0x28</span>);
 <span class="attr">#[repr(C)]
 </span><span class="kw">pub union </span>IMAGE_SECTION_HEADER_UNION {
     <span class="kw">pub </span>PhysicalAddress: u32,
     <span class="kw">pub </span>VirtualSize: u32,
 }
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;IMAGE_SECTION_HEADER_UNION&gt;() == <span class="number">0x4</span>);
 <span class="attr">#[repr(C)]
-</span><span class="kw">pub struct </span>RESOURCE_DIRECTORY_TABLE {
+</span><span class="kw">pub struct </span>IMAGE_RESOURCE_DIRECTORY {
     <span class="kw">pub </span>Characteristics: u32,
     <span class="kw">pub </span>TimeDateStamp: u32,
     <span class="kw">pub </span>MajorVersion: u16,
@@ -389,11 +413,13 @@
     <span class="kw">pub </span>NumberOfNameEntries: u16,
     <span class="kw">pub </span>NumberOfIDEntries: u16,
 }
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;IMAGE_RESOURCE_DIRECTORY&gt;() == <span class="number">0x10</span>);
 <span class="attr">#[repr(C)]
-</span><span class="kw">pub struct </span>RESOURCE_DATA_ENTRY {
+</span><span class="kw">pub struct </span>IMAGE_RESOURCE_DATA_ENTRY {
     <span class="kw">pub </span>DataRVA: u32,
     <span class="kw">pub </span>DataSize: u32,
     <span class="kw">pub </span>CodePage: u32,
     <span class="kw">pub </span>Reserved: u32,
 }
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;IMAGE_RESOURCE_DATA_ENTRY&gt;() == <span class="number">0x10</span>);
 </code></pre></div></section></main></body></html>

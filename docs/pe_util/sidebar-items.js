@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["PE"]};
+window.SIDEBAR_ITEMS = {"enum":["FunctionId"],"mod":["consts","definitions","dos_header","nt_headers","optional_header"],"struct":["PE"]};

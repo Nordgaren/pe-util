@@ -29,9 +29,17 @@
 <a href="#29" id="29">29</a>
 <a href="#30" id="30">30</a>
 <a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(non_snake_case)]
 #![allow(clippy::upper_case_acronyms)]
-</span><span class="kw">use </span>std::ptr::addr_of;
+
+</span><span class="kw">use </span><span class="kw">crate</span>::definitions::IMAGE_DOS_HEADER;
+<span class="kw">use </span>std::ffi::CStr;
+<span class="kw">use </span>std::ptr::addr_of;
 
 <span class="comment">// I am not sure if I should do this for both structures, or just have to user add the size of `GRPICONDIR`
 // to the pointer to `GRPICONDIR` get the pointer to `GRPICONDIRENTRY`.
@@ -43,6 +51,7 @@
     <span class="kw">pub </span>idCount: u16,
     <span class="kw">pub </span>idEntries: GRPICONDIRENTRY,
 }
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;GRPICONDIR&gt;() == <span class="number">0x14</span>);
 <span class="kw">impl </span>GRPICONDIR {
     <span class="kw">pub fn </span>get_entries(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[GRPICONDIRENTRY] {
         <span class="kw">unsafe </span>{ std::slice::from_raw_parts(<span class="macro">addr_of!</span>(<span class="self">self</span>.idEntries), <span class="self">self</span>.idCount <span class="kw">as </span>usize) }
@@ -60,4 +69,5 @@
     <span class="kw">pub </span>dwBytesInRes: u32,
     <span class="kw">pub </span>nId: u16,
 }
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;GRPICONDIRENTRY&gt;() == <span class="number">0xE</span>);
 </code></pre></div></section></main></body></html>

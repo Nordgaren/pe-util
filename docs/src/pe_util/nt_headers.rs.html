@@ -70,76 +70,100 @@
 <a href="#70" id="70">70</a>
 <a href="#71" id="71">71</a>
 <a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::definitions::{IMAGE_FILE_HEADER, IMAGE_NT_HEADERS32, IMAGE_NT_HEADERS64};
+<span class="kw">use </span><span class="kw">crate</span>::dos_header::DosHeader;
+<span class="kw">use </span><span class="kw">crate</span>::file_header::FileHeader;
 <span class="kw">use </span><span class="kw">crate</span>::optional_header::OptionalHeader;
-<span class="kw">use </span><span class="kw">crate</span>::PE;
+<span class="kw">use crate</span>::{PeEncodedPointer, PE};
+<span class="kw">use </span>encoded_pointer::encoded::EncodedPointer;
 <span class="kw">use </span>std::marker::PhantomData;
-<span class="kw">use </span>std::mem;
-<span class="kw">use </span>std::mem::size_of;
-<span class="doccomment">/// ZST that represents the IMAGE_NT_HEADERS portion of the PE file
-</span><span class="attr">#[derive(Copy, Clone)]
-</span><span class="kw">pub struct </span>NtHeaders;
 
-<span class="kw">impl </span>PE&lt;<span class="lifetime">&#39;_</span>, NtHeaders&gt; {
+<span class="doccomment">/// Type that represents the `IMAGE_NT_HEADERS` portion of the PE file
+</span><span class="attr">#[repr(transparent)]
+</span><span class="kw">pub struct </span>NtHeaders&lt;<span class="lifetime">&#39;a</span>&gt; {
+    pointer: PeEncodedPointer,
+    _marker: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u8&gt;,
+}
+<span class="kw">const _</span>: () = <span class="macro">assert!</span>(std::mem::size_of::&lt;NtHeaders&gt;() == std::mem::size_of::&lt;usize&gt;());
+
+<span class="kw">impl </span>NtHeaders&lt;<span class="lifetime">&#39;_</span>&gt; {
     <span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>nt_headers32(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>IMAGE_NT_HEADERS32 {
-        <span class="kw">unsafe </span>{ mem::transmute(<span class="self">self</span>.nt_headers_address()) }
+        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self</span>.pointer.nt_headers_address() <span class="kw">as </span><span class="kw-2">*mut </span>IMAGE_NT_HEADERS32) }
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>nt_headers64(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>IMAGE_NT_HEADERS64 {
-        <span class="kw">unsafe </span>{ mem::transmute(<span class="self">self</span>.nt_headers_address()) }
+        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self</span>.pointer.nt_headers_address() <span class="kw">as </span><span class="kw-2">*mut </span>IMAGE_NT_HEADERS64) }
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>signature(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
         <span class="self">self</span>.nt_headers32().Signature
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>file_header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>IMAGE_FILE_HEADER {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.nt_headers32().FileHeader
+    </span><span class="kw">pub fn </span>file_header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>FileHeader {
+        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(<span class="self">self </span><span class="kw">as </span><span class="kw-2">*const </span>NtHeaders <span class="kw">as </span><span class="kw-2">*const </span>FileHeader) }
     }
-    <span class="kw">pub fn </span>file_header_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span><span class="kw-2">mut </span>IMAGE_FILE_HEADER {
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>.nt_headers32_mut().FileHeader
+    <span class="doccomment">/// # Safety
+    ///
+    /// The caller has to guarantee that they are upholding rusts mutability invariance with the original
+    /// buffer that holds the PE. Mutating the `IMAGE_FILE_HEADER` of a PE that has another mutable reference
+    /// could result in undefined behaviour. Edit PE files your program doesn&#39;t own at your own risk.
+    </span><span class="attr">#[inline(always)]
+    </span><span class="kw">pub unsafe fn </span>file_header_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>FileHeader {
+        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self </span><span class="kw">as </span><span class="kw-2">*mut </span>NtHeaders <span class="kw">as </span><span class="kw-2">*mut </span>FileHeader) }
+    }
+    <span class="doccomment">/// Returns the `OptionalHeader` structure, which allows you to inspect the PEs `IMAGE_OPTIONAL_HEADER`
+    /// structure.
+    </span><span class="attr">#[inline(always)]
+    </span><span class="kw">pub fn </span>optional_header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>OptionalHeader {
+        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(<span class="self">self </span><span class="kw">as </span><span class="kw-2">*const </span>NtHeaders <span class="kw">as </span><span class="kw-2">*const </span>OptionalHeader) }
+    }
+    <span class="doccomment">/// Returns the `OptionalHeader` structure, which allows you to inspect and mutate the PEs `IMAGE_OPTIONAL_HEADER`
+    /// structure.
+    ///
+    /// # Safety
+    ///
+    /// The caller has to guarantee that they are upholding rusts mutability invariance with the original
+    /// buffer that holds the PE. Mutating the `OptionalHeader` of a PE that has another mutable reference
+    /// could result in undefined behaviour. Edit PE files your program doesn&#39;t own at your own risk.
+    </span><span class="attr">#[inline(always)]
+    </span><span class="kw">pub unsafe fn </span>optional_header_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>OptionalHeader {
+        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self </span><span class="kw">as </span><span class="kw-2">*mut </span>NtHeaders <span class="kw">as </span><span class="kw-2">*mut </span>OptionalHeader) }
     }
     <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>optional_header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PE&lt;OptionalHeader&gt; {
-        PE {
-            pointer: <span class="self">self</span>.pointer,
-            _marker: PhantomData,
-        }
-    }
-    <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>optional_header_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; PE&lt;OptionalHeader&gt; {
-        PE {
-            pointer: <span class="self">self</span>.pointer,
-            _marker: PhantomData,
-        }
-    }
-    <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>size_of(<span class="self">self</span>) -&gt; usize {
-        <span class="kw">if </span><span class="self">self</span>.is_64bit() {
-            size_of::&lt;IMAGE_NT_HEADERS64&gt;()
+    </span><span class="kw">pub fn </span>size_of(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="kw">if </span><span class="self">self</span>.pointer.is_64bit() {
+            std::mem::size_of::&lt;IMAGE_NT_HEADERS64&gt;()
         } <span class="kw">else </span>{
-            size_of::&lt;IMAGE_NT_HEADERS32&gt;()
+            std::mem::size_of::&lt;IMAGE_NT_HEADERS32&gt;()
         }
     }
 }
 
-<span class="kw">impl </span>PE&lt;<span class="lifetime">&#39;_</span>, NtHeaders&gt; {
+<span class="kw">impl </span>NtHeaders&lt;<span class="lifetime">&#39;_</span>&gt; {
     <span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>nt_headers32_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span><span class="kw-2">mut </span>IMAGE_NT_HEADERS32 {
-        <span class="kw">unsafe </span>{ mem::transmute(<span class="self">self</span>.nt_headers_address()) }
+        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self</span>.pointer.nt_headers_address() <span class="kw">as </span><span class="kw-2">*mut </span>IMAGE_NT_HEADERS32) }
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>nt_headers64_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span><span class="kw-2">mut </span>IMAGE_NT_HEADERS64 {
-        <span class="kw">unsafe </span>{ mem::transmute(<span class="self">self</span>.nt_headers_address()) }
+        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self</span>.pointer.nt_headers_address() <span class="kw">as </span><span class="kw-2">*mut </span>IMAGE_NT_HEADERS64) }
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>set_signature(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32) {
         <span class="self">self</span>.nt_headers32_mut().Signature = value
-    }
-    <span class="attr">#[inline(always)]
-    </span><span class="kw">pub fn </span>file_header_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span><span class="kw-2">mut </span>IMAGE_FILE_HEADER {
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>.nt_headers32_mut().FileHeader
     }
 }
 </code></pre></div></section></main></body></html>
