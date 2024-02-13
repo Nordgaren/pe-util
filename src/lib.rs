@@ -221,6 +221,7 @@ impl PE<'_> {
     /// Returns the `DosHeader` structure, which allows you to inspect the PEs `IMAGE_DOS_HEADER` structure.
     #[inline(always)]
     pub fn dos_headers(&self) -> &DosHeader {
+        // SAFETY: `DosHeader` is the same layout as `PE`, guaranteed by #[repr(transparent)]
         unsafe { &*(self as *const PE as *const DosHeader) }
     }
     /// Returns the `DosHeader` structure, which allows you to inspect and mutate the PEs `IMAGE_DOS_HEADER`
@@ -233,11 +234,13 @@ impl PE<'_> {
     /// could result in undefined behaviour. Edit PE files your program doesn't own at your own risk.
     #[inline(always)]
     pub unsafe fn dos_headers_mut(&mut self) -> &mut DosHeader {
+        // SAFETY: `DosHeader` is the same layout as `PE`, guaranteed by #[repr(transparent)]
         unsafe { &mut *(self as *mut PE as *mut DosHeader) }
     }
     /// Returns the `NtHeaders` structure, which allows you to inspect the PEs `IMAGE_NT_HEADERS` structure.
     #[inline(always)]
     pub fn nt_headers(&self) -> &NtHeaders {
+        // SAFETY: `NtHeaders` is the same layout as `PE`, guaranteed by #[repr(transparent)]
         unsafe { &*(self as *const PE as *const NtHeaders) }
     }
     /// Returns the `NtHeaders` structure, which allows you to inspect and mutate the PEs `IMAGE_NT_HEADERS`
@@ -250,6 +253,7 @@ impl PE<'_> {
     /// could result in undefined behaviour. Edit PE files your program doesn't own at your own risk.
     #[inline(always)]
     pub unsafe fn nt_headers_mut(&mut self) -> &mut NtHeaders {
+        // SAFETY: `NtHeaders` is the same layout as `PE`, guaranteed by #[repr(transparent)]
         unsafe { &mut *(self as *mut PE as *mut NtHeaders) }
     }
     /// Returns the section headers for the PE file as a slice.

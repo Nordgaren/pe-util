@@ -29,6 +29,7 @@ impl NtHeaders<'_> {
     }
     #[inline(always)]
     pub fn file_header(&self) -> &FileHeader {
+        // SAFETY: `FileHeader` is the same layout as `PE`, guaranteed by #[repr(transparent)]
         unsafe { &*(self as *const NtHeaders as *const FileHeader) }
     }
     /// # Safety
@@ -37,13 +38,15 @@ impl NtHeaders<'_> {
     /// buffer that holds the PE. Mutating the `IMAGE_FILE_HEADER` of a PE that has another mutable reference
     /// could result in undefined behaviour. Edit PE files your program doesn't own at your own risk.
     #[inline(always)]
-    pub unsafe fn file_header_mut(&mut self) -> &FileHeader {
+    pub unsafe fn file_header_mut(&mut self) -> &mut FileHeader {
+        // SAFETY: `FileHeader` is the same layout as `PE`, guaranteed by #[repr(transparent)]
         unsafe { &mut *(self as *mut NtHeaders as *mut FileHeader) }
     }
     /// Returns the `OptionalHeader` structure, which allows you to inspect the PEs `IMAGE_OPTIONAL_HEADER`
     /// structure.
     #[inline(always)]
     pub fn optional_header(&self) -> &OptionalHeader {
+        // SAFETY: `OptionalHeader` is the same layout as `PE`, guaranteed by #[repr(transparent)]
         unsafe { &*(self as *const NtHeaders as *const OptionalHeader) }
     }
     /// Returns the `OptionalHeader` structure, which allows you to inspect and mutate the PEs `IMAGE_OPTIONAL_HEADER`
@@ -56,6 +59,7 @@ impl NtHeaders<'_> {
     /// could result in undefined behaviour. Edit PE files your program doesn't own at your own risk.
     #[inline(always)]
     pub unsafe fn optional_header_mut(&mut self) -> &mut OptionalHeader {
+        // SAFETY: `OptionalHeader` is the same layout as `PE`, guaranteed by #[repr(transparent)]
         unsafe { &mut *(self as *mut NtHeaders as *mut OptionalHeader) }
     }
     #[inline(always)]
