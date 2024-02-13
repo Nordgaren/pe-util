@@ -82,6 +82,10 @@
 <a href="#82" id="82">82</a>
 <a href="#83" id="83">83</a>
 <a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::definitions::{IMAGE_FILE_HEADER, IMAGE_NT_HEADERS32, IMAGE_NT_HEADERS64};
 <span class="kw">use </span><span class="kw">crate</span>::dos_header::DosHeader;
 <span class="kw">use </span><span class="kw">crate</span>::file_header::FileHeader;
@@ -113,7 +117,8 @@
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>file_header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>FileHeader {
-        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(<span class="self">self </span><span class="kw">as </span><span class="kw-2">*const </span>NtHeaders <span class="kw">as </span><span class="kw-2">*const </span>FileHeader) }
+        <span class="comment">// SAFETY: `FileHeader` is the same layout as `PE`, guaranteed by #[repr(transparent)]
+        </span><span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(<span class="self">self </span><span class="kw">as </span><span class="kw-2">*const </span>NtHeaders <span class="kw">as </span><span class="kw-2">*const </span>FileHeader) }
     }
     <span class="doccomment">/// # Safety
     ///
@@ -121,14 +126,16 @@
     /// buffer that holds the PE. Mutating the `IMAGE_FILE_HEADER` of a PE that has another mutable reference
     /// could result in undefined behaviour. Edit PE files your program doesn&#39;t own at your own risk.
     </span><span class="attr">#[inline(always)]
-    </span><span class="kw">pub unsafe fn </span>file_header_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>FileHeader {
-        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self </span><span class="kw">as </span><span class="kw-2">*mut </span>NtHeaders <span class="kw">as </span><span class="kw-2">*mut </span>FileHeader) }
+    </span><span class="kw">pub unsafe fn </span>file_header_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>FileHeader {
+        <span class="comment">// SAFETY: `FileHeader` is the same layout as `PE`, guaranteed by #[repr(transparent)]
+        </span><span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self </span><span class="kw">as </span><span class="kw-2">*mut </span>NtHeaders <span class="kw">as </span><span class="kw-2">*mut </span>FileHeader) }
     }
     <span class="doccomment">/// Returns the `OptionalHeader` structure, which allows you to inspect the PEs `IMAGE_OPTIONAL_HEADER`
     /// structure.
     </span><span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>optional_header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>OptionalHeader {
-        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(<span class="self">self </span><span class="kw">as </span><span class="kw-2">*const </span>NtHeaders <span class="kw">as </span><span class="kw-2">*const </span>OptionalHeader) }
+        <span class="comment">// SAFETY: `OptionalHeader` is the same layout as `PE`, guaranteed by #[repr(transparent)]
+        </span><span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(<span class="self">self </span><span class="kw">as </span><span class="kw-2">*const </span>NtHeaders <span class="kw">as </span><span class="kw-2">*const </span>OptionalHeader) }
     }
     <span class="doccomment">/// Returns the `OptionalHeader` structure, which allows you to inspect and mutate the PEs `IMAGE_OPTIONAL_HEADER`
     /// structure.
@@ -140,7 +147,8 @@
     /// could result in undefined behaviour. Edit PE files your program doesn&#39;t own at your own risk.
     </span><span class="attr">#[inline(always)]
     </span><span class="kw">pub unsafe fn </span>optional_header_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>OptionalHeader {
-        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self </span><span class="kw">as </span><span class="kw-2">*mut </span>NtHeaders <span class="kw">as </span><span class="kw-2">*mut </span>OptionalHeader) }
+        <span class="comment">// SAFETY: `OptionalHeader` is the same layout as `PE`, guaranteed by #[repr(transparent)]
+        </span><span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self </span><span class="kw">as </span><span class="kw-2">*mut </span>NtHeaders <span class="kw">as </span><span class="kw-2">*mut </span>OptionalHeader) }
     }
     <span class="attr">#[inline(always)]
     </span><span class="kw">pub fn </span>size_of(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
