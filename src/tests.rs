@@ -254,9 +254,9 @@ fn get_exports() {
 //     }
 // }
 
-#[test]
 // I currently don't know how to associate a lifetime with a usize or a raw pointer, so `PE::from_address()` and `PE::from_ptr()`
 // will allow the user to create a PE that doesn't have any lifetime issues. Should not compile, but does.
+#[test]
 fn pe_from_address_no_lifetime_issues() {
     unsafe {
         let pe;

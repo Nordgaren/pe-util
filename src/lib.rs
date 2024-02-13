@@ -387,7 +387,13 @@ impl PE<'_> {
 
         None
     }
-    /// Takes in a FunctionId and looks up the function in the Export Directory by Name or Ordinal.
+    /// Takes in a FunctionId and looks up the function address in the Export Directory by Name or Ordinal.
+    /// Returns None if the specified function name or ordinal cannot be found.
+    pub fn get_export_address(&self, export: FunctionId) -> Option<usize> {
+        let rva = self.get_export_rva(export)?;
+        Some(self.pointer.base_address() + rva as usize)
+    }
+    /// Takes in a FunctionId and looks up the function rva in the Export Directory by Name or Ordinal.
     /// Returns None if the specified function name or ordinal cannot be found.
     pub fn get_export_rva(&self, export: FunctionId) -> Option<u32> {
         let nt_headers = self.nt_headers();
@@ -685,8 +691,8 @@ fn get_resource_data_entry<'a>(
     resource_id: u32,
 ) -> Option<&'a IMAGE_RESOURCE_DATA_ENTRY> {
     unsafe {
-        // SAFETY: Literally the same thing, one is just mut, and the Rust compiler won't implicitly
-        // downgrade the mutability, for some reason.
+        // SAFETY: Literally the same repr(c) structure, one is just mut, and the Rust compiler won't
+        // implicitly downgrade the mutability of the interior reference.
         std::mem::transmute(get_resource_data_entry_mut(
             resource_directory_table,
             category_id,
