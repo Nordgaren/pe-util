@@ -110,7 +110,7 @@ impl DosHeader<'_> {
     /// Returns a reference to the start of the PE file as an `IMAGE_DOS_HEADER`.
     #[inline(always)]
     fn dos_header_mut(&mut self) -> &'_ mut IMAGE_DOS_HEADER {
-        unsafe { &mut *self.pointer.get_mut_pointer() }
+        unsafe { &mut *self.pointer.get_pointer_mut() }
     }
     #[inline(always)]
     pub fn set_e_magic(&mut self, value: u16) {
