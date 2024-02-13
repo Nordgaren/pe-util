@@ -8,8 +8,8 @@ use crate::consts::{
 use crate::definitions::IMAGE_NT_HEADERS32;
 use crate::definitions::{
     IMAGE_DATA_DIRECTORY, IMAGE_DOS_HEADER, IMAGE_EXPORT_DIRECTORY, IMAGE_FILE_HEADER,
-    IMAGE_IMPORT_DESCRIPTOR, IMAGE_RESOURCE_DIRECTORY_ENTRY, IMAGE_SECTION_HEADER,
-    IMAGE_RESOURCE_DATA_ENTRY, IMAGE_RESOURCE_DIRECTORY,
+    IMAGE_IMPORT_DESCRIPTOR, IMAGE_RESOURCE_DATA_ENTRY, IMAGE_RESOURCE_DIRECTORY,
+    IMAGE_RESOURCE_DIRECTORY_ENTRY, IMAGE_SECTION_HEADER,
 };
 use crate::dos_header::DosHeader;
 use crate::encoded::PeEncodedPointer;
@@ -22,20 +22,21 @@ use encoded_pointer::encoded::EncodedPointer;
 use std::io::{Error, ErrorKind};
 use std::ops::{Deref, DerefMut};
 
-mod consts;
-mod definitions;
-mod dos_header;
+pub mod consts;
+pub mod definitions;
+pub mod dos_header;
 mod encoded;
-mod nt_headers;
-mod optional_header;
+pub mod nt_headers;
+pub mod optional_header;
 mod resource;
 mod tests;
 mod util;
+mod file_header;
 
 /// A pointer sized type that allows the user to read a buffer in memory as a Windows PE. Currently only supports 32-bit
 /// and 64-bit PEs on x86 architectures, but, I plan on supporting more architectures in the future.
-/// This type is indifferent to 32 or 64-bit architecture, as well as wether or not the file has been mapped into memory
-/// for execution, or if the file is still in it's on disk stat.
+/// This type is indifferent to 32 or 64-bit architecture, as well as whether the file has been mapped into memory
+/// for execution, or if the file is still in its on disk stat.
 ///
 /// # Example
 /// ```rust
@@ -73,24 +74,14 @@ impl<'a> PE<'a> {
     /// lifetime of the slice.
     /// Returns an `Error` with `ErrorKind::InvalidData` if the pe cannot be validated by magic bytes
     /// and header signature values.
-    ///
-    /// # Arguments
-    ///
-    /// * `slice`: `&'a [u8]`
-    ///
-    /// returns: `Result<PE<DosHeader>, Error>`
     #[inline(always)]
     pub fn from_slice(slice: &'a [u8]) -> std::io::Result<Self> {
-        Self::from_address(slice.as_ptr() as usize)
+        // SAFETY: This shares a lifetime with the provided slice, so we can pass it in the from_address
+        // do the validation, etc.
+        unsafe { Self::from_address(slice.as_ptr() as usize) }
     }
     /// Returns a `PE` from a slice that starts with a valid PE file. The returned `PE` shares the
     /// lifetime of the slice. Does not validate that the slice is a valid PE file.
-    ///
-    /// # Arguments
-    ///
-    /// * `slice`: `&'a [u8]`
-    ///
-    /// returns: `PE<DosHeader`
     ///
     /// # Safety
     ///
@@ -102,13 +93,6 @@ impl<'a> PE<'a> {
     /// Returns a `PE` from a slice that shares the lifetime of the slice. Assumes the mapped state of
     /// with the passed in `is_mapped` parameter, and does not validate that the slice is a valid
     /// PE file.
-    ///
-    /// # Arguments
-    ///
-    /// * `slice`: `&'a [u8]`
-    /// * `is_mapped`: `bool`
-    ///
-    /// returns: `PE<DosHeader>`
     ///
     /// # Safety
     ///
@@ -123,23 +107,15 @@ impl<'a> PE<'a> {
     /// Returns an `Error` with `ErrorKind::InvalidData` if the pe cannot be validated by magic bytes
     /// and header signature values.
     ///
-    /// # Arguments
+    /// # Safety
     ///
-    /// * `ptr`: `*const u8`
     ///
-    /// returns: `Result<PE<DosHeader>, Error>`
     #[inline(always)]
     pub unsafe fn from_ptr(ptr: *const u8) -> std::io::Result<Self> {
         Self::from_address(ptr as usize)
     }
     /// Returns a `PE` from a `*const u8` that points to the start of a valid PE file. There is no
     /// associated lifetime for the returned `PE`. Does not do any validation of the data at the pointer.
-    ///
-    /// # Arguments
-    ///
-    /// * `ptr`: `*const u8`
-    ///
-    /// returns: `DosHeader`
     ///
     /// # Safety
     ///
@@ -152,13 +128,6 @@ impl<'a> PE<'a> {
     /// Returns a `PE` from a `*const u8` that points to the start of a valid PE file. There is no
     /// associated lifetime for the returned `PE`. Assumes the mapped state of with the passed in
     /// `is_mapped` parameter, and does not validate that the slice is a valid PE file.
-    ///
-    /// # Arguments
-    ///
-    /// * `slice`: `&'a [u8]`
-    /// * `is_mapped`: `bool`
-    ///
-    /// returns: `PE<DosHeader>`
     ///
     /// # Safety
     ///
@@ -173,12 +142,10 @@ impl<'a> PE<'a> {
     /// Returns an `Error` with `ErrorKind::InvalidData` if the pe cannot be validated by magic bytes
     /// and header signature values.
     ///
-    /// # Arguments
+    /// # Safety
     ///
-    /// * `base_address`: `usize`
-    ///
-    /// returns: `Result<PE<DosHeader>, Error>`
-    fn from_address(base_address: usize) -> std::io::Result<Self> {
+    /// This method does not share lifetime with anything
+    pub unsafe fn from_address(base_address: usize) -> std::io::Result<Self> {
         let mut pe = PE {
             pointer: PeEncodedPointer::new(EncodedPointer::new(base_address, false, false)?),
             _marker: PhantomData,
@@ -203,16 +170,13 @@ impl<'a> PE<'a> {
     /// Returns a PE from a `usize` with the value of the address of a PE file. There is no associated
     /// lifetime for the returned `PE`. Does not do any validation of the data at the address.
     ///
-    /// # Arguments
-    ///
-    /// * `base_address`: `usize`
-    ///
-    /// returns: `PE<DosHeader>`
+    /// This function does not check `EncodedPointer` compatability, mapped state, nor that the address
+    /// provided points to a valid PE file.
     ///
     /// # Safety
     ///
-    /// This function does not check `EncodedPointer` compatability, mapped state, nor that the address
-    /// provided points to a valid PE file.
+    /// This function does not check `EncodedPointer` compatability, mapped state, nor that the pointer
+    /// points to a valid PE file.
     unsafe fn from_address_unchecked(base_address: usize) -> Self {
         PE {
             pointer: PeEncodedPointer::new(EncodedPointer::from_value_unchecked(base_address)),
@@ -222,13 +186,6 @@ impl<'a> PE<'a> {
     /// Returns a `PE` from a `usize` with the value of the address of a PE file. There is no associated
     /// lifetime for the returned `PE`. Assumes the mapped state of with the passed in `is_mapped`
     /// parameter, and does not validate that the data at the address is a valid PE file.
-    ///
-    /// # Arguments
-    ///
-    /// * `base_address`: `usize`
-    /// * `is_mapped`: `bool`
-    ///
-    /// returns: `PE<DosHeader>`
     ///
     /// # Safety
     ///
@@ -246,58 +203,56 @@ impl<'a> PE<'a> {
 
 impl PE<'_> {
     /// Returns true if the architecture for the PE is 64-bit, or false for any other architecture.
-    ///
-    /// returns: bool
     #[inline(always)]
     pub fn is_64bit(&self) -> bool {
         self.pointer.is_64bit()
     }
     /// Returns true if the PE is mapped into memory, or false is in it's "on disk" state.
-    ///
-    /// returns: bool
     #[inline(always)]
     pub fn is_mapped(&self) -> bool {
         self.pointer.is_mapped()
     }
     /// Checks that the memory pointed to by `self.pointer` is a valid PE file.
-    ///
-    /// returns: `bool`
     #[inline(always)]
     pub fn validate(&self) -> bool {
         self.dos_headers().e_magic() == IMAGE_DOS_SIGNATURE
             && self.nt_headers().signature() == IMAGE_NT_SIGNATURE
     }
-    /// Returns the NtHeaders variant of the PE structure.
-    ///
-    /// returns: `PE<NtHeaders>`
+    /// Returns the `DosHeader` structure, which allows you to inspect the PEs `IMAGE_DOS_HEADER` structure.
     #[inline(always)]
     pub fn dos_headers(&self) -> &DosHeader {
         unsafe { &*(self as *const PE as *const DosHeader) }
     }
-    /// Returns the NtHeaders variant of the PE structure.
+    /// Returns the `DosHeader` structure, which allows you to inspect and mutate the PEs `IMAGE_DOS_HEADER`
+    /// structure.
     ///
-    /// returns: `PE<NtHeaders>`
+    /// # Safety
+    ///
+    /// The caller has to guarantee that they are upholding rusts mutability invariance with the original
+    /// buffer that holds the PE. Mutating the `DosHeader` of a PE that has another mutable reference
+    /// could result in undefined behaviour. Edit PE files your program doesn't own at your own risk.
     #[inline(always)]
     pub unsafe fn dos_headers_mut(&mut self) -> &mut DosHeader {
         unsafe { &mut *(self as *mut PE as *mut DosHeader) }
     }
-    /// Returns the NtHeaders variant of the PE structure.
-    ///
-    /// returns: `PE<NtHeaders>`
+    /// Returns the `NtHeaders` structure, which allows you to inspect the PEs `IMAGE_NT_HEADERS` structure.
     #[inline(always)]
     pub fn nt_headers(&self) -> &NtHeaders {
         unsafe { &*(self as *const PE as *const NtHeaders) }
     }
-    /// Returns the NtHeaders variant of the PE structure.
+    /// Returns the `NtHeaders` structure, which allows you to inspect and mutate the PEs `IMAGE_NT_HEADERS`
+    /// structure.
     ///
-    /// returns: `PE<NtHeaders>`
+    /// # Safety
+    ///
+    /// The caller has to guarantee that they are upholding rusts mutability invariance with the original
+    /// buffer that holds the PE. Mutating the `NtHeaders` of a PE that has another mutable reference
+    /// could result in undefined behaviour. Edit PE files your program doesn't own at your own risk.
     #[inline(always)]
     pub unsafe fn nt_headers_mut(&mut self) -> &mut NtHeaders {
         unsafe { &mut *(self as *mut PE as *mut NtHeaders) }
     }
     /// Returns the section headers for the PE file as a slice.
-    ///
-    /// returns: `&'_ mut [IMAGE_SECTION_HEADER]`
     #[inline(always)]
     pub fn section_headers(&self) -> &'_ [IMAGE_SECTION_HEADER] {
         let section_headers_base = self.pointer.nt_headers_address() + self.nt_headers().size_of();
@@ -314,8 +269,6 @@ impl PE<'_> {
         }
     }
     /// Returns the section headers for the PE file as a mutable slice.
-    ///
-    /// returns: `&'_ mut [IMAGE_SECTION_HEADER]`
     #[inline(always)]
     pub fn section_headers_mut(&mut self) -> &'_ mut [IMAGE_SECTION_HEADER] {
         let section_headers_base = self.pointer.nt_headers_address() + self.nt_headers().size_of();
@@ -407,12 +360,6 @@ impl PE<'_> {
     }
     /// Takes the `Relative Virtual Address` and returns the `File Offset Address`. The return value
     /// is an offset.
-    ///
-    /// # Arguments
-    ///
-    /// * `rva`: `u32`
-    ///
-    /// returns: `Option<u32>`
     pub fn rva_to_foa(&self, rva: u32) -> Option<u32> {
         let section_headers = self.section_headers();
 
@@ -442,12 +389,6 @@ impl PE<'_> {
     }
     /// Takes in a FunctionId and looks up the function in the Export Directory by Name or Ordinal.
     /// Returns None if the specified function name or ordinal cannot be found.
-    ///
-    /// # Arguments
-    ///
-    /// * `export`: `FunctionId`
-    ///
-    /// returns: `Option<u32>`
     pub fn get_export_rva(&self, export: FunctionId) -> Option<u32> {
         let nt_headers = self.nt_headers();
         let optional_header = nt_headers.optional_header();
@@ -538,12 +479,6 @@ impl PE<'_> {
     }
     /// Returns a `Vec<&str>` that contains the names all the functions that are exported by name for
     /// the PE. Returns None if it could not find the export directory.
-    ///
-    /// # Arguments
-    ///
-    /// * `export`: `FunctionId`
-    ///
-    /// returns: `Option<Vec<&'_ str>>`
     pub fn get_exports(&self) -> Option<Vec<&'_ str>> {
         let nt_headers = self.nt_headers();
         let optional_header = nt_headers.optional_header();
@@ -605,12 +540,6 @@ impl PE<'_> {
     }
     /// Returns the name of the function with the given ordinal value. Returns `None` if the Export
     /// directory cannot be found, or the provided ordinal is not found.
-    ///
-    /// # Arguments
-    ///
-    /// * `ordinal`: `u16`
-    ///
-    /// returns: `Option<String>`
     pub fn get_export_name(&self, ordinal: u16) -> Option<String> {
         let nt_headers = self.nt_headers();
         let optional_header = nt_headers.optional_header();
@@ -672,12 +601,6 @@ impl PE<'_> {
     }
     /// Returns the ordinal of the function with the given name provided as a slice of bytes. Returns
     /// `None` if the Export directory cannot be found, or the provided ordinal is not found.
-    ///
-    /// # Arguments
-    ///
-    /// * `function_name`: `&[u8]`
-    ///
-    /// returns: `u16`
     pub fn get_function_ordinal(&self, function_name: &[u8]) -> u16 {
         unsafe {
             let base_addr = self.pointer.base_address();
@@ -713,16 +636,9 @@ impl PE<'_> {
 
         0
     }
-    /// Looks up the Resource entry with the provided category and resource id. Currently assumes
+    /// Looks up the Resource entry with the provided category and resource id. Currently, assumes
     /// the first directory in the language entries. Returns the resource as a `&[u8]`, or `None` if
     /// the resource directory or resource could not be found.
-    ///
-    /// # Arguments
-    ///
-    /// * `category_id`: `u32`
-    /// * `resource_id`: `u32`
-    ///
-    /// returns: `Option<&[u8]>`
     pub fn get_pe_resource(&self, category_id: u32, resource_id: u32) -> Option<&'_ [u8]> {
         let nt_headers = self.nt_headers();
         let optional_header = nt_headers.optional_header();
@@ -763,14 +679,6 @@ impl PE<'_> {
 
 /// Returns a reference to the requested `RESOURCE_DATA_ENTRY` using the category and resource IDs provided. Assumes that
 /// the first language in the lang table is the right entry to use.
-///
-/// # Arguments
-///
-/// * `resource_directory_table`: `&RESOURCE_DIRECTORY_TABLE`
-/// * `category_id`: `u32`
-/// * `resource_id`: `u32`
-///
-/// returns: `Option<&RESOURCE_DATA_ENTRY>`
 fn get_resource_data_entry<'a>(
     resource_directory_table: &IMAGE_RESOURCE_DIRECTORY,
     category_id: u32,
@@ -789,14 +697,6 @@ fn get_resource_data_entry<'a>(
 
 /// Returns a mutable reference to the requested `RESOURCE_DATA_ENTRY` using the category and resource IDs provided. Assumes
 /// that the first language in the lang table is the right entry to use.
-///
-/// # Arguments
-///
-/// * `resource_directory_table`: `&RESOURCE_DIRECTORY_TABLE`
-/// * `category_id`: `u32`
-/// * `resource_id`: `u32`
-///
-/// returns: `Option<&mut RESOURCE_DATA_ENTRY>`
 fn get_resource_data_entry_mut<'a>(
     resource_directory_table: &IMAGE_RESOURCE_DIRECTORY,
     category_id: u32,
@@ -810,14 +710,14 @@ fn get_resource_data_entry_mut<'a>(
         offset &= 0x7FFFFFFF;
 
         //level 2: Resource Name/ID subdirectory
-        let resource_directory_table_name_id =
-            &*((resource_directory_table_addr + offset as usize) as *const IMAGE_RESOURCE_DIRECTORY);
+        let resource_directory_table_name_id = &*((resource_directory_table_addr + offset as usize)
+            as *const IMAGE_RESOURCE_DIRECTORY);
         let mut offset = get_entry_offset_by_id(resource_directory_table_name_id, resource_id)?;
         offset &= 0x7FFFFFFF;
 
         //level 3: language subdirectory - just use the first entry.
-        let resource_directory_table_lang =
-            &*((resource_directory_table_addr + offset as usize) as *const IMAGE_RESOURCE_DIRECTORY);
+        let resource_directory_table_lang = &*((resource_directory_table_addr + offset as usize)
+            as *const IMAGE_RESOURCE_DIRECTORY);
         let resource_directory_table_lang_entries = addr_of!(*resource_directory_table_lang)
             as usize
             + std::mem::size_of::<IMAGE_RESOURCE_DIRECTORY>();
@@ -825,7 +725,10 @@ fn get_resource_data_entry_mut<'a>(
             &*((resource_directory_table_lang_entries) as *const IMAGE_RESOURCE_DIRECTORY_ENTRY);
         let offset = resource_directory_table_lang_entry.OffsetToData;
 
-        Some(&mut *((resource_directory_table_addr + offset as usize) as *mut IMAGE_RESOURCE_DATA_ENTRY))
+        Some(
+            &mut *((resource_directory_table_addr + offset as usize)
+                as *mut IMAGE_RESOURCE_DATA_ENTRY),
+        )
     }
 }
 
@@ -833,11 +736,11 @@ unsafe fn get_entry_offset_by_id(
     resource_directory_table: &IMAGE_RESOURCE_DIRECTORY,
     category_id: u32,
 ) -> Option<u32> {
-    // We have to skip the Name entries, here, to iterate over the entries by Id.
+    // We have to skip the Name entries, here, to iterate over the entries by id.
     let resource_entries_address = addr_of!(*resource_directory_table) as usize
         + std::mem::size_of::<IMAGE_RESOURCE_DIRECTORY>()
         + (std::mem::size_of::<IMAGE_RESOURCE_DIRECTORY_ENTRY>()
-        * resource_directory_table.NumberOfNameEntries as usize);
+            * resource_directory_table.NumberOfNameEntries as usize);
     let resource_directory_entries = std::slice::from_raw_parts(
         resource_entries_address as *const IMAGE_RESOURCE_DIRECTORY_ENTRY,
         resource_directory_table.NumberOfIDEntries as usize,

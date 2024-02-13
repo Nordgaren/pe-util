@@ -25,7 +25,7 @@ fn pe_from_memory_address() {
         let addr = GetModuleHandleA(std::ptr::null());
         let pe = PE::from_address(addr).unwrap();
         assert_eq!(
-            pe.nt_headers().file_header().Machine,
+            pe.nt_headers().file_header().machine(),
             IMAGE_FILE_MACHINE_FLAG
         );
     }
@@ -39,7 +39,7 @@ fn pe_from_file_32() {
     let pe = PE::from_slice(file.as_slice()).unwrap();
 
     assert_eq!(
-        pe.nt_headers().file_header().Machine,
+        pe.nt_headers().file_header().machine(),
         IMAGE_FILE_MACHINE_I386
     )
 }
@@ -53,7 +53,7 @@ fn pe_from_file_64() {
     let file = fs::read(format!("{path}\\..\\Sysnative\\notepad.exe")).unwrap();
     let pe = PE::from_slice(file.as_slice()).unwrap();
     assert_eq!(
-        pe.nt_headers().file_header().Machine,
+        pe.nt_headers().file_header().machine(),
         IMAGE_FILE_MACHINE_AMD64
     )
 }
@@ -264,7 +264,7 @@ fn pe_from_address_no_lifetime_issues() {
             let file = GetModuleHandleA("Kernel32.dll\0".as_ptr());
             pe = PE::from_address(file).expect("Could not parse slice as a PE.");
         }
-        assert_eq!(pe.nt_headers().file_header().Machine, 0x8664)
+        assert_eq!(pe.nt_headers().file_header().machine(), 0x8664)
     }
 }
 

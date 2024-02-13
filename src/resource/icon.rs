@@ -1,5 +1,7 @@
 #![allow(non_snake_case)]
 #![allow(clippy::upper_case_acronyms)]
+
+use std::ffi::CStr;
 use std::ptr::addr_of;
 use crate::definitions::IMAGE_DOS_HEADER;
 

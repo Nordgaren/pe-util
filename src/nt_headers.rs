@@ -4,6 +4,7 @@ use crate::optional_header::OptionalHeader;
 use crate::{PeEncodedPointer, PE};
 use encoded_pointer::encoded::EncodedPointer;
 use std::marker::PhantomData;
+use crate::file_header::FileHeader;
 
 /// Type that represents the `IMAGE_NT_HEADERS` portion of the PE file
 #[repr(transparent)]
@@ -27,13 +28,32 @@ impl NtHeaders<'_> {
         self.nt_headers32().Signature
     }
     #[inline(always)]
-    pub fn file_header(&self) -> &'_ IMAGE_FILE_HEADER {
-        &self.nt_headers32().FileHeader
+    pub fn file_header(&self) -> &FileHeader {
+        unsafe { &*(self as *const NtHeaders as *const FileHeader) }
     }
+    /// # Safety
+    ///
+    /// The caller has to guarantee that they are upholding rusts mutability invariance with the original
+    /// buffer that holds the PE. Mutating the `IMAGE_FILE_HEADER` of a PE that has another mutable reference
+    /// could result in undefined behaviour. Edit PE files your program doesn't own at your own risk.
+    #[inline(always)]
+    pub unsafe fn file_header_mut(&mut self) -> &FileHeader {
+        unsafe { &mut *(self as *mut NtHeaders as *mut FileHeader) }
+    }
+    /// Returns the `OptionalHeader` structure, which allows you to inspect the PEs `IMAGE_OPTIONAL_HEADER`
+    /// structure.
     #[inline(always)]
     pub fn optional_header(&self) -> &OptionalHeader {
         unsafe { &*(self as *const NtHeaders as *const OptionalHeader) }
     }
+    /// Returns the `OptionalHeader` structure, which allows you to inspect and mutate the PEs `IMAGE_OPTIONAL_HEADER`
+    /// structure.
+    ///
+    /// # Safety
+    ///
+    /// The caller has to guarantee that they are upholding rusts mutability invariance with the original
+    /// buffer that holds the PE. Mutating the `OptionalHeader` of a PE that has another mutable reference
+    /// could result in undefined behaviour. Edit PE files your program doesn't own at your own risk.
     #[inline(always)]
     pub unsafe fn optional_header_mut(&mut self) -> &mut OptionalHeader {
         unsafe { &mut *(self as *mut NtHeaders as *mut OptionalHeader) }
@@ -60,9 +80,5 @@ impl NtHeaders<'_> {
     #[inline(always)]
     pub fn set_signature(&mut self, value: u32) {
         self.nt_headers32_mut().Signature = value
-    }
-    #[inline(always)]
-    pub unsafe fn file_header_mut(&mut self) -> &'_ mut IMAGE_FILE_HEADER {
-        &mut self.nt_headers32_mut().FileHeader
     }
 }
