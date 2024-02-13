@@ -26,12 +26,12 @@ pub mod consts;
 pub mod definitions;
 pub mod dos_header;
 mod encoded;
+mod file_header;
 pub mod nt_headers;
 pub mod optional_header;
 mod resource;
 mod tests;
 mod util;
-mod file_header;
 
 /// A pointer sized type that allows the user to read a buffer in memory as a Windows PE. Currently only supports 32-bit
 /// and 64-bit PEs on x86 architectures, but, I plan on supporting more architectures in the future.

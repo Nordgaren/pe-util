@@ -1,9 +1,9 @@
 #![allow(non_snake_case)]
 #![allow(clippy::upper_case_acronyms)]
 
+use crate::definitions::IMAGE_DOS_HEADER;
 use std::ffi::CStr;
 use std::ptr::addr_of;
-use crate::definitions::IMAGE_DOS_HEADER;
 
 // I am not sure if I should do this for both structures, or just have to user add the size of `GRPICONDIR`
 // to the pointer to `GRPICONDIR` get the pointer to `GRPICONDIRENTRY`.

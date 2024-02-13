@@ -1,6 +1,6 @@
-use std::marker::PhantomData;
 use crate::definitions::{IMAGE_FILE_HEADER, IMAGE_NT_HEADERS32, IMAGE_NT_HEADERS64};
 use crate::encoded::PeEncodedPointer;
+use std::marker::PhantomData;
 
 /// Type that represents the `IMAGE_FILE_HEADER` portion of the PE file
 #[repr(transparent)]
@@ -9,17 +9,14 @@ pub struct FileHeader<'a> {
     _marker: PhantomData<&'a u8>,
 }
 
-const _: () = assert!(std::mem::size_of::<crate::nt_headers::NtHeaders>() == std::mem::size_of::<usize>());
+const _: () =
+    assert!(std::mem::size_of::<crate::nt_headers::NtHeaders>() == std::mem::size_of::<usize>());
 
 impl FileHeader<'_> {
-    #[inline(always)]
-    fn nt_headers(&self) -> &'_ IMAGE_NT_HEADERS32 {
-        unsafe { &mut *(self.pointer.nt_headers_address() as *mut IMAGE_NT_HEADERS32) }
-    }
     /// Returns `IMAGE_FILE_HEADER` reference
     #[inline(always)]
     fn file_header(&self) -> &'_ IMAGE_FILE_HEADER {
-        &self.nt_headers().FileHeader
+        &unsafe { &mut *(self.pointer.nt_headers_address() as *mut IMAGE_NT_HEADERS32) }.FileHeader
     }
     #[inline(always)]
     pub fn machine(&self) -> u16 {
@@ -57,14 +54,11 @@ impl FileHeader<'_> {
 }
 
 impl FileHeader<'_> {
-    #[inline(always)]
-    fn nt_headers_mut(&mut self) -> &'_ mut IMAGE_NT_HEADERS32 {
-        unsafe { &mut *(self.pointer.nt_headers_address() as *mut IMAGE_NT_HEADERS32) }
-    }
     /// Returns mutable `IMAGE_FILE_HEADER` reference
     #[inline(always)]
     fn file_header_mut(&mut self) -> &'_ mut IMAGE_FILE_HEADER {
-        &mut self.nt_headers_mut().FileHeader
+        &mut unsafe { &mut *(self.pointer.nt_headers_address() as *mut IMAGE_NT_HEADERS32) }
+            .FileHeader
     }
     #[inline(always)]
     pub fn get_machine(&mut self, value: u16) {

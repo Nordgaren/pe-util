@@ -4,7 +4,7 @@ use crate::consts::{
 };
 use crate::definitions::{
     IMAGE_DATA_DIRECTORY, IMAGE_DOS_HEADER, IMAGE_EXPORT_DIRECTORY, IMAGE_IMPORT_DESCRIPTOR,
-    IMAGE_NT_HEADERS32, IMAGE_SECTION_HEADER, IMAGE_RESOURCE_DIRECTORY,
+    IMAGE_NT_HEADERS32, IMAGE_RESOURCE_DIRECTORY, IMAGE_SECTION_HEADER,
 };
 use crate::encoded::PeEncodedPointer;
 use crate::nt_headers::NtHeaders;
@@ -30,11 +30,6 @@ impl DosHeader<'_> {
     #[inline(always)]
     fn dos_header(&self) -> &'_ IMAGE_DOS_HEADER {
         unsafe { &*self.pointer.get_pointer() }
-    }
-    /// Returns a reference to the start of the PE file as an `IMAGE_DOS_HEADER`.
-    #[inline(always)]
-    fn dos_header_mut(&mut self) -> &'_ mut IMAGE_DOS_HEADER {
-        unsafe { &mut *self.pointer.get_mut_pointer() }
     }
     #[inline(always)]
     pub fn e_magic(&self) -> u16 {
@@ -112,6 +107,11 @@ impl DosHeader<'_> {
 }
 
 impl DosHeader<'_> {
+    /// Returns a reference to the start of the PE file as an `IMAGE_DOS_HEADER`.
+    #[inline(always)]
+    fn dos_header_mut(&mut self) -> &'_ mut IMAGE_DOS_HEADER {
+        unsafe { &mut *self.pointer.get_mut_pointer() }
+    }
     #[inline(always)]
     pub fn set_e_magic(&mut self, value: u16) {
         self.dos_header_mut().e_magic = value;
@@ -185,4 +185,3 @@ impl DosHeader<'_> {
         self.dos_header_mut().e_lfanew = value;
     }
 }
-

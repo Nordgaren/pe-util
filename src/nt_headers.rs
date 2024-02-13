@@ -1,10 +1,10 @@
 use crate::definitions::{IMAGE_FILE_HEADER, IMAGE_NT_HEADERS32, IMAGE_NT_HEADERS64};
 use crate::dos_header::DosHeader;
+use crate::file_header::FileHeader;
 use crate::optional_header::OptionalHeader;
 use crate::{PeEncodedPointer, PE};
 use encoded_pointer::encoded::EncodedPointer;
 use std::marker::PhantomData;
-use crate::file_header::FileHeader;
 
 /// Type that represents the `IMAGE_NT_HEADERS` portion of the PE file
 #[repr(transparent)]
