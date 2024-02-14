@@ -264,7 +264,10 @@ fn pe_from_address_no_lifetime_issues() {
             let file = GetModuleHandleA("Kernel32.dll\0".as_ptr());
             pe = PE::from_address(file).expect("Could not parse slice as a PE.");
         }
-        assert_eq!(pe.nt_headers().file_header().machine(), 0x8664)
+        #[cfg(target_arch = "x86_64")]
+        assert_eq!(pe.nt_headers().file_header().machine(), 0x8664);
+        #[cfg(target_arch = "x86")]
+        assert_eq!(pe.nt_headers().file_header().machine(), 0x14C);
     }
 }
 

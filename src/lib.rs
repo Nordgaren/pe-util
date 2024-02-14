@@ -147,7 +147,7 @@ impl<'a> PE<'a> {
     /// This method does not share lifetime with anything
     pub unsafe fn from_address(base_address: usize) -> std::io::Result<Self> {
         let mut pe = PE {
-            pointer: PeEncodedPointer::new(EncodedPointer::new(base_address, false, false)?),
+            pointer: PeEncodedPointer::new(EncodedPointer::new(base_address, false)?),
             _marker: PhantomData,
         };
 
@@ -193,7 +193,7 @@ impl<'a> PE<'a> {
     /// This function does not check `EncodedPointer` compatability, mapped state, nor that the pointer
     /// points to a valid PE file. The caller must specify the correct mapped state for `is_mapped`.
     unsafe fn from_address_assume_mapped(base_address: usize, is_mapped: bool) -> Self {
-        let value = EncodedPointer::encode(base_address, is_mapped, false);
+        let value = EncodedPointer::encode(base_address, is_mapped);
 
         PE {
             pointer: PeEncodedPointer::new(EncodedPointer::from_value_unchecked(value)),
