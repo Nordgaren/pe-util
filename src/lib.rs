@@ -177,6 +177,7 @@ impl<'a> PE<'a> {
     ///
     /// This function does not check `EncodedPointer` compatability, mapped state, nor that the pointer
     /// points to a valid PE file.
+    #[inline(always)]
     unsafe fn from_address_unchecked(base_address: usize) -> Self {
         PE {
             pointer: PeEncodedPointer::new(EncodedPointer::from_value_unchecked(base_address)),

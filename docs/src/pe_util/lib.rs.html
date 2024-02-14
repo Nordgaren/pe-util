@@ -794,6 +794,7 @@
 <a href="#794" id="794">794</a>
 <a href="#795" id="795">795</a>
 <a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(unused)]
 #![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../README.md&quot;</span>)]
 
@@ -973,6 +974,7 @@
     ///
     /// This function does not check `EncodedPointer` compatability, mapped state, nor that the pointer
     /// points to a valid PE file.
+    </span><span class="attr">#[inline(always)]
     </span><span class="kw">unsafe fn </span>from_address_unchecked(base_address: usize) -&gt; <span class="self">Self </span>{
         PE {
             pointer: PeEncodedPointer::new(EncodedPointer::from_value_unchecked(base_address)),
