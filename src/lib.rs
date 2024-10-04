@@ -29,7 +29,7 @@ mod encoded;
 mod file_header;
 pub mod nt_headers;
 pub mod optional_header;
-mod resource;
+pub mod resource;
 mod tests;
 mod util;
 
